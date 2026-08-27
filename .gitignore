@@ -1,7 +1,63 @@
+# =========================
+# Environment & Secrets
+# =========================
+.env
+.env.*
+!.env.example
+
+# =========================
+# Python
+# =========================
 .venv/
+venv/
 backend/.venv/
+__pycache__/
+*.py[cod]
+*.pyo
+
+# =========================
+# Node / Frontend
+# =========================
 frontend/node_modules/
 frontend/dist/
-.env
-__pycache__/
-*.pyc
+frontend/build/
+frontend/.next/
+
+# =========================
+# Generated frontend files
+# =========================
+*.tsbuildinfo
+frontend/vite.config.js
+frontend/vite.config.d.ts
+
+# =========================
+# Logs
+# =========================
+*.log
+logs/
+
+# =========================
+# IDE / Editor
+# =========================
+.vscode/
+.idea/
+
+# =========================
+# OS files
+# =========================
+.DS_Store
+Thumbs.db
+
+# =========================
+# Python tooling
+# =========================
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# =========================
+# Temporary files
+# =========================
+*.tmp
+*.temp
+*.swp
