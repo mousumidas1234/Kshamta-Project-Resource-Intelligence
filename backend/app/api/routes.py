@@ -1,13 +1,71 @@
-from fastapi import APIRouter, Depends, HTTPException, Query
-from ..core.auth import login, require
-from ..schemas.models import LoginRequest, ResourceRequest, WhatIfRequest, AttritionRequest
+from fastapi import APIRouter, Depends, HTTPException
+from datetime import datetime, timezone
+from ..core.auth import demo_login, login, require
+from ..core.users import _connect, hash_password, list_users, public_user, find, ROLES
+from ..schemas.models import LoginRequest, DemoLoginRequest, ResourceRequest, WhatIfRequest, AttritionRequest, UserCreate, UserUpdate, PasswordReset
 from ..services import project_service, risk_service, workforce_service, resource_service, attrition_service
 from ..services.data_service import datasets
 
 router=APIRouter(prefix="/api")
 @router.post("/auth/login")
 def auth(body: LoginRequest):
-    token,user=login(body.username,body.password); return {"access_token":token,"token_type":"bearer","user":{"username":user["sub"],"role":user["role"]}}
+    token,user=login(body.username,body.password); return {"access_token":token,"token_type":"bearer","user":{"username":user["sub"],"role":find(user["user_id"])["role"]}}
+@router.post("/auth/demo")
+def demo_auth(body: DemoLoginRequest):
+    token,user=demo_login(body.role); return {"access_token":token,"token_type":"bearer","user":{"username":user["sub"],"role":user["role"],"demo":True}}
+@router.get("/users")
+def users(user=Depends(require("user_management"))): return list_users()
+@router.post("/users", status_code=201)
+def create_user(body: UserCreate, user=Depends(require("user_management_write"))):
+    if body.password != body.confirm_password: raise HTTPException(400, "Passwords do not match")
+    if body.role not in ROLES: raise HTTPException(400, "Invalid role")
+    if body.status not in ("Active", "Inactive"): raise HTTPException(400, "Invalid status")
+    now = datetime.now(timezone.utc).isoformat()
+    try:
+        with _connect() as db:
+            cursor = db.execute("INSERT INTO users(full_name, username, password_hash, role, is_active, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                                (body.full_name.strip(), body.username.strip(), hash_password(body.password), body.role, body.status == "Active", now, now))
+            row = db.execute("SELECT * FROM users WHERE id = ?", (cursor.lastrowid,)).fetchone()
+    except Exception as exc:
+        if "UNIQUE" in str(exc).upper(): raise HTTPException(409, "Username is already in use")
+        raise
+    return public_user(row)
+@router.put("/users/{user_id}")
+def update_user(user_id: int, body: UserUpdate, user=Depends(require("user_management_write"))):
+    target = find(user_id)
+    if not target: raise HTTPException(404, "User not found")
+    if body.role not in ROLES: raise HTTPException(400, "Invalid role")
+    if body.status not in ("Active", "Inactive"): raise HTTPException(400, "Invalid status")
+    if target["role"] == "Admin" and (body.role != "Admin" or body.status != "Active"):
+        with _connect() as db:
+            if db.execute("SELECT COUNT(*) FROM users WHERE role = 'Admin' AND is_active = 1").fetchone()[0] <= 1:
+                raise HTTPException(400, "The final active Admin cannot be deactivated or changed")
+    now = datetime.now(timezone.utc).isoformat()
+    try:
+        with _connect() as db:
+            db.execute("UPDATE users SET full_name=?, username=?, role=?, is_active=?, updated_at=? WHERE id=?",
+                       (body.full_name.strip(), body.username.strip(), body.role, body.status == "Active", now, user_id))
+            row = db.execute("SELECT * FROM users WHERE id=?", (user_id,)).fetchone()
+    except Exception as exc:
+        if "UNIQUE" in str(exc).upper(): raise HTTPException(409, "Username is already in use")
+        raise
+    return public_user(row)
+@router.post("/users/{user_id}/reset-password")
+def reset_password(user_id: int, body: PasswordReset, user=Depends(require("user_management_write"))):
+    if body.new_password != body.confirm_password: raise HTTPException(400, "Passwords do not match")
+    if not find(user_id): raise HTTPException(404, "User not found")
+    with _connect() as db: db.execute("UPDATE users SET password_hash=?, updated_at=? WHERE id=?", (hash_password(body.new_password), datetime.now(timezone.utc).isoformat(), user_id))
+    return {"message": "Password reset successfully."}
+@router.delete("/users/{user_id}")
+def delete_user(user_id: int, user=Depends(require("user_management_write"))):
+    target = find(user_id)
+    if not target: raise HTTPException(404, "User not found")
+    if target["id"] == user["user_id"]: raise HTTPException(400, "You cannot delete your own account")
+    with _connect() as db:
+        if target["role"] == "Admin" and db.execute("SELECT COUNT(*) FROM users WHERE role='Admin'").fetchone()[0] <= 1:
+            raise HTTPException(400, "The final Admin account cannot be deleted")
+        db.execute("DELETE FROM users WHERE id=?", (user_id,))
+    return {"message": "User deleted successfully."}
 @router.get("/dashboard/overview")
 def dashboard(user=Depends(require("dashboard"))):
     tasks,forms,employees=datasets(); risk=risk_service.risks(); workforce=workforce_service.overview(); return {"metrics":{"total_projects":len(risk),"total_tasks":len(tasks),"total_forms":len(forms),"open_tasks":sum(x["open_tasks"] for x in risk),"overdue_tasks":sum(x["overdue_tasks"] for x in risk),"completion_rate":round(sum(x["closed_tasks"] for x in risk)/len(tasks)*100,1),"average_project_risk":round(sum(x["risk_score"] for x in risk)/len(risk),1),"total_employees":len(employees),"employee_attrition_rate":workforce["metrics"]["attrition_rate"]},"top_risks":risk[:8],"project_charts":project_service.analytics()["charts"],"workforce_charts":workforce["charts"]}
