@@ -56,6 +56,16 @@ npm run dev
 
 URLs: frontend `http://localhost:5173`, backend `http://localhost:8000`, API documentation `http://localhost:8000/docs`.
 
+### Render deployment
+
+Configure the frontend Render service with this build-time environment variable:
+
+```text
+VITE_API_URL=https://kshamta-project-resource-intelligence.onrender.com
+```
+
+Keep `VITE_API_URL=http://localhost:8000` in the local `frontend/.env` for local development. The frontend reads this variable through Vite, so the production backend URL is not embedded in the application source. The backend allows requests from both the local frontend and `https://kshamta-frontend.onrender.com`.
+
 Demo-only users: `admin / Admin@123`, `project_manager / Manager@123`, and `hr_manager / HR@123`.
 
 ## Project structure
