@@ -23,6 +23,11 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+html, body, #root {
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
 body::before {
   content: '';
   position: fixed;
@@ -36,6 +41,49 @@ body::before {
 }
 
 @keyframes cosmic-drift { from { background-position: 0 0, 0 0, 0 0; } to { background-position: 35px 25px, -30px 20px, 20px -25px; } }
+
+.cosmic-backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+  opacity: .42;
+  background: radial-gradient(ellipse at 15% 10%, rgba(79,70,229,.14), transparent 36%), radial-gradient(ellipse at 88% 32%, rgba(168,85,247,.10), transparent 34%), radial-gradient(ellipse at 55% 100%, rgba(14,165,233,.08), transparent 38%);
+}
+
+.cosmic-backdrop::before, .cosmic-backdrop::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(circle, rgba(186,230,253,.75) 0 1px, transparent 1.5px), radial-gradient(circle, rgba(216,180,254,.55) 0 1px, transparent 1.5px);
+  background-size: 145px 175px, 205px 225px;
+  background-position: 20px 30px, 80px 12px;
+}
+
+.cosmic-backdrop::after { opacity: .55; transform: scale(1.08); }
+
+.cosmic-backdrop i {
+  position: absolute;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  opacity: .55;
+  background: radial-gradient(circle, rgba(251,207,232,.9) 0 22%, rgba(192,132,252,.45) 38%, transparent 72%);
+  box-shadow: 0 0 9px rgba(217,70,239,.28);
+  animation: cosmic-float 18s ease-in-out infinite alternate;
+}
+
+.cosmic-backdrop i:nth-child(1) { left: 11%; top: 22%; }
+.cosmic-backdrop i:nth-child(2) { left: 29%; top: 68%; width: 4px; height: 4px; animation-delay: -5s; }
+.cosmic-backdrop i:nth-child(3) { left: 47%; top: 16%; animation-delay: -9s; }
+.cosmic-backdrop i:nth-child(4) { left: 64%; top: 78%; width: 4px; height: 4px; animation-delay: -3s; }
+.cosmic-backdrop i:nth-child(5) { left: 82%; top: 27%; animation-delay: -12s; }
+.cosmic-backdrop i:nth-child(6) { left: 92%; top: 72%; width: 4px; height: 4px; animation-delay: -7s; }
+.cosmic-backdrop i:nth-child(7) { left: 6%; top: 86%; width: 4px; height: 4px; animation-delay: -14s; }
+.cosmic-backdrop i:nth-child(8) { left: 73%; top: 49%; animation-delay: -10s; }
+
+@keyframes cosmic-float { from { transform: translate3d(0, 0, 0) scale(.8); } to { transform: translate3d(10px, -14px, 0) scale(1.15); } }
 
 button, input, select, textarea {
   font: inherit;
@@ -105,4 +153,5 @@ button, input, select, textarea {
     scroll-behavior: auto !important;
     transition-duration: 0.01ms !important;
   }
+  .cosmic-backdrop i { animation: none !important; }
 }
