@@ -5,6 +5,7 @@ import { KPI, Badge, Table } from './components/UI';
 import { Chart } from './components/Chart';
 import {
   LayoutDashboard,
+  Home,
   BarChart3,
   AlertTriangle,
   Users,
@@ -38,6 +39,7 @@ import {
 
 const permissions: Record<string, string[]> = {
   Admin: [
+    'Home',
     'Dashboard',
     'Project Analytics',
     'Project Risk',
@@ -50,6 +52,7 @@ const permissions: Record<string, string[]> = {
     'User Management'
   ],
   'Project Manager': [
+    'Home',
     'Dashboard',
     'Project Analytics',
     'Project Risk',
@@ -58,6 +61,7 @@ const permissions: Record<string, string[]> = {
     'Project Details'
   ],
   'HR Manager': [
+    'Home',
     'Dashboard',
     'Workforce Analytics',
     'Attrition Prediction',
@@ -451,7 +455,7 @@ function Dashboard() {
 
   return (
     <Page title="Executive Dashboard" subtitle="Enterprise project status telemetry and workforce parameters.">
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         {Object.entries(d.metrics).map(([k, v]) => (
           <KPI key={k} label={labels[k] || k} value={k.includes('rate') ? `${v}%` : v} />
         ))}
@@ -472,9 +476,11 @@ function Dashboard() {
   );
 }
 
-function Projects({ detail = false }: { detail?: boolean }) {
+function Projects({ detail = false, canEdit = false }: { detail?: boolean; canEdit?: boolean }) {
   const [d, setD] = useState<any>();
   const [project, setProject] = useState('');
+  const [savingProject, setSavingProject] = useState(false);
+  const [savingTask, setSavingTask] = useState<number | null>(null);
 
   useEffect(() => {
     api.analytics().then(setD);
@@ -483,6 +489,30 @@ function Projects({ detail = false }: { detail?: boolean }) {
   useEffect(() => {
     if (project) api.project(project).then(setD);
   }, [project]);
+
+  const saveProject = async () => {
+    setSavingProject(true);
+    try {
+      await api.updateProject(d.project, { name: d.name, status: d.status, priority: d.priority, deadline: d.deadline || null });
+      setD(await api.project(d.project));
+    } catch (e: any) {
+      window.alert(e.message || 'Project update failed.');
+    } finally {
+      setSavingProject(false);
+    }
+  };
+
+  const saveTaskStatus = async (taskId: number, status: string) => {
+    setSavingTask(taskId);
+    try {
+      await api.updateTaskStatus(taskId, status);
+      setD(await api.project(d.project));
+    } catch (e: any) {
+      window.alert(e.message || 'Task status update failed.');
+    } finally {
+      setSavingTask(null);
+    }
+  };
 
   if (!d) return <Loading />;
 
@@ -517,12 +547,23 @@ function Projects({ detail = false }: { detail?: boolean }) {
               <h2 className="text-xl font-extrabold text-slate-900">Project: {d.project}</h2>
             </div>
             {d.metrics && (
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                 {Object.entries(d.metrics)
                   .filter(([k]) => k !== 'project')
                   .map(([k, v]) => (
                     <KPI key={k} label={k.replaceAll('_', ' ')} value={v} />
                   ))}
+              </div>
+            )}
+            {canEdit && (
+              <div className="rounded-2xl border border-indigo-100 bg-indigo-50/40 p-5">
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                  <label className="text-xs font-bold uppercase tracking-wider text-slate-500">Project Name<input value={d.name || ''} onChange={(e) => setD({ ...d, name: e.target.value })} className="mt-2 w-full rounded-xl border border-slate-200 bg-white p-3 text-sm font-normal normal-case tracking-normal text-slate-800" /></label>
+                  <label className="text-xs font-bold uppercase tracking-wider text-slate-500">Status<select value={d.status || 'Active'} onChange={(e) => setD({ ...d, status: e.target.value })} className="mt-2 w-full rounded-xl border border-slate-200 bg-white p-3 text-sm font-normal normal-case tracking-normal text-slate-800"><option>Active</option><option>On Hold</option><option>Completed</option><option>Cancelled</option></select></label>
+                  <label className="text-xs font-bold uppercase tracking-wider text-slate-500">Priority<select value={d.priority || 'Medium'} onChange={(e) => setD({ ...d, priority: e.target.value })} className="mt-2 w-full rounded-xl border border-slate-200 bg-white p-3 text-sm font-normal normal-case tracking-normal text-slate-800"><option>Low</option><option>Medium</option><option>High</option><option>Critical</option></select></label>
+                  <label className="text-xs font-bold uppercase tracking-wider text-slate-500">Deadline<input type="date" value={d.deadline || ''} onChange={(e) => setD({ ...d, deadline: e.target.value })} className="mt-2 w-full rounded-xl border border-slate-200 bg-white p-3 text-sm font-normal normal-case tracking-normal text-slate-800" /></label>
+                </div>
+                <button onClick={saveProject} disabled={savingProject || !d.name?.trim()} className="mt-4 rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-bold text-white disabled:opacity-50">{savingProject ? 'Saving…' : 'Save Project Changes'}</button>
               </div>
             )}
             <div>
@@ -532,6 +573,14 @@ function Projects({ detail = false }: { detail?: boolean }) {
             <div>
               <h3 className="mb-4 text-xs font-bold uppercase tracking-wider text-slate-400">Task Log Details</h3>
               <Table rows={d.tasks} />
+              {canEdit && d.tasks?.length > 0 && (
+                <div className="mt-4 rounded-2xl border border-slate-100 bg-white p-5 shadow-sm">
+                  <p className="mb-3 text-xs font-bold uppercase tracking-wider text-slate-400">Authorized Task Status Updates</p>
+                  <div className="space-y-2">
+                    {d.tasks.map((task: any) => <div key={task.id} className="flex flex-col gap-2 rounded-xl border border-slate-100 p-3 sm:flex-row sm:items-center sm:justify-between"><span className="text-sm font-semibold text-slate-700">{task.Ref || `Task ${task.id}`} <span className="font-normal text-slate-400">· {task.Description || 'No description'}</span></span><select value={task.Status || ''} disabled={savingTask === task.id} onChange={(e) => saveTaskStatus(task.id, e.target.value)} className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 sm:w-44"><option>Open</option><option>In Progress</option><option>Closed</option><option>Completed</option><option>On Hold</option></select></div>)}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         ) : (
@@ -546,7 +595,7 @@ function Projects({ detail = false }: { detail?: boolean }) {
 
   return (
     <Page title="Project Analytics" subtitle="Aggregate telemetry of deliverables, priorities, and workflow statuses.">
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         {Object.entries(d.metrics).map(([k, v]) => (
           <KPI key={k} label={k.replaceAll('_', ' ')} value={String(v).includes('rate') ? `${v}%` : v} />
         ))}
@@ -590,7 +639,7 @@ function Workforce() {
       title="Workforce Analytics"
       subtitle="Overview of workforce distributions and observations. Excludes causal determinations."
     >
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {Object.entries(d.metrics).map(([k, v]) => (
           <KPI key={k} label={k.replaceAll('_', ' ')} value={k === 'attrition_rate' ? `${v}%` : v} />
         ))}
@@ -855,7 +904,7 @@ function WhatIf() {
 
       {result && (
         <div className="mt-8 space-y-8 animate-fade-in">
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {Object.entries(result)
               .filter(([k]) => !['replacement_recommendations', 'disclaimer', 'workload_impact'].includes(k))
               .map(([k, v]) => (
@@ -1568,7 +1617,7 @@ export default function App() {
     'Resource Recommendation': <Resource />,
     'What-If Simulation': <WhatIf />,
     'Attrition Prediction': <Attrition />,
-    'Project Details': <Projects detail />,
+    'Project Details': <Projects detail canEdit={!demoRole} />,
     'Employee Details': <Employees />,
     'User Management': <UserManagement readOnly={!!demoRole} />
   };

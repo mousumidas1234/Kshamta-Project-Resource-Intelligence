@@ -61,7 +61,7 @@ def recommend(department, role_level, workload, min_performance, exclude=None):
         e = e[e.employee_id.astype(str) != str(exclude)].copy()
     workload = float(workload)
     min_performance = float(min_performance)
-    capacity = (BASELINE_HOURS - e.avg_weekly_hours).clip(lower=0)
+    capacity = (e.capacity - e.avg_weekly_hours).clip(lower=0)
     dep_match = e.department.eq(department)
     role_match = e.role_level.eq(role_level)
     perf_match = e.performance_rating.ge(min_performance)
@@ -103,7 +103,7 @@ def what_if(employee_id):
     if found.empty:
         return None
     person = found.iloc[0]
-    available = max(0.0, BASELINE_HOURS - float(person.avg_weekly_hours))
+    available = max(0.0, float(person.capacity) - float(person.avg_weekly_hours))
     risk = "High" if available >= 35 else "Medium" if available >= 20 else "Low"
     return {
         "selected_employee": str(person.employee_id),

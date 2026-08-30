@@ -4,12 +4,13 @@ from fastapi import Depends, Header, HTTPException
 from .config import SECRET
 from .users import find, verify_password
 
-PERMISSIONS = {"Admin": {"dashboard", "projects", "risk", "workforce", "resources", "attrition", "employees", "user_management", "user_management_write"},
-               "Project Manager": {"dashboard", "projects", "risk", "resources", "employees"},
-               "HR Manager": {"dashboard", "workforce", "attrition", "employees"}}
+PERMISSIONS = {"Admin": {"dashboard", "projects", "risk", "workforce", "resources", "attrition", "employees", "user_management", "user_management_write", "projects_write", "employees_write"},
+               "Project Manager": {"dashboard", "projects", "risk", "resources", "employees", "projects_write"},
+               "HR Manager": {"dashboard", "workforce", "attrition", "employees", "employees_write"}}
 DEMO_PERMISSIONS = {"Admin": {"dashboard", "projects", "risk", "workforce", "resources", "attrition", "employees", "user_management"},
                    "Project Manager": {"dashboard", "projects", "risk", "resources", "employees"},
                    "HR Manager": {"dashboard", "workforce", "attrition", "employees"}}
+
 ROLES = set(PERMISSIONS)
 
 

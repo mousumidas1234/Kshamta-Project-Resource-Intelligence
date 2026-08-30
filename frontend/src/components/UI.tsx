@@ -71,17 +71,17 @@ export function KPI({ label, value }: { label: string; value: any }) {
   const colors = getColorsForLabel(label);
 
   return (
-    <div className={`rounded-2xl border border-slate-100 shadow-sm card-design flex items-center justify-between gap-4`}>
+    <div className={`rounded-2xl border border-slate-100/70 p-5 bg-white shadow-sm card-design flex items-center justify-between gap-4 min-w-0 w-full hover:shadow-md transition-all duration-300`}>
       <div className="flex-1 min-w-0">
-        <p className="text-xs font-bold uppercase tracking-wider text-slate-400 truncate">
+        <p className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 whitespace-normal break-words leading-tight">
           {label}
         </p>
-        <p className={`mt-2.5 text-2xl font-black tracking-tight ${colors.text}`}>
+        <p className={`mt-2 text-xl sm:text-2xl font-black tracking-tight ${colors.text} truncate`}>
           {value}
         </p>
       </div>
       <div className={`rounded-xl p-3 shrink-0 flex items-center justify-center transition-transform duration-300 hover:scale-105 ${colors.icon}`}>
-        <IconComponent className="h-6 w-6 stroke-[2.25]" />
+        <IconComponent className="h-5 w-5 sm:h-6 sm:w-6 stroke-[2.25]" />
       </div>
     </div>
   );
