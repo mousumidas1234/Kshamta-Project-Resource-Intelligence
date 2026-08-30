@@ -1,8 +1,9 @@
+import sqlite3
 from fastapi import APIRouter, Depends, HTTPException
 from datetime import datetime, timezone
 from ..core.auth import demo_login, login, require
 from ..core.users import _connect, hash_password, list_users, public_user, find, ROLES
-from ..schemas.models import LoginRequest, DemoLoginRequest, ResourceRequest, WhatIfRequest, AttritionRequest, UserCreate, UserUpdate, PasswordReset
+from ..schemas.models import LoginRequest, DemoLoginRequest, ResourceRequest, WhatIfRequest, AttritionRequest, UserCreate, UserUpdate, PasswordReset, ProjectCreate, ProjectUpdate, TaskCreateOrUpdate, TaskStatusUpdate, EmployeeCreateOrUpdate, AssignmentRequest
 from ..services import project_service, risk_service, workforce_service, resource_service, attrition_service
 from ..services.data_service import datasets
 
@@ -104,3 +105,142 @@ def whatif(body:WhatIfRequest,user=Depends(require("resources"))):
 def model_metrics(user=Depends(require("attrition"))): return attrition_service.metrics()
 @router.post("/attrition/predict")
 def attrition(body:AttritionRequest,user=Depends(require("attrition"))): return attrition_service.predict(body.model_dump())
+
+# 1. Project CRUD
+@router.post("/projects", status_code=201)
+def create_project(body: ProjectCreate, user=Depends(require("projects_write"))):
+    with _connect() as db:
+        exist = db.execute("SELECT 1 FROM projects WHERE id = ?", (body.id.strip(),)).fetchone()
+        if exist: raise HTTPException(400, "Project ID already exists")
+        db.execute("INSERT INTO projects (id, name, status, priority, deadline) VALUES (?, ?, ?, ?, ?)",
+                   (body.id.strip(), body.name.strip(), body.status, body.priority, body.deadline))
+        db.commit()
+    return {"message": "Project created successfully"}
+
+@router.put("/projects/{project_id}")
+def update_project(project_id: str, body: ProjectUpdate, user=Depends(require("projects_write"))):
+    with _connect() as db:
+        exist = db.execute("SELECT 1 FROM projects WHERE id = ?", (project_id,)).fetchone()
+        if not exist: raise HTTPException(404, "Project not found")
+        db.execute("UPDATE projects SET name = ?, status = ?, priority = ?, deadline = ? WHERE id = ?",
+                   (body.name.strip(), body.status, body.priority, body.deadline, project_id))
+        db.commit()
+    return {"message": "Project updated successfully"}
+
+# 2. Task CRUD
+@router.post("/tasks", status_code=201)
+def create_task(body: TaskCreateOrUpdate, user=Depends(require("projects_write"))):
+    with _connect() as db:
+        proj_exist = db.execute("SELECT 1 FROM projects WHERE id = ?", (body.project,)).fetchone()
+        if not proj_exist: raise HTTPException(400, "Referenced project does not exist")
+        db.execute("""
+            INSERT INTO tasks (Ref, Status, Location, Description, Created, Target, Type, "To Package", "Status Changed", Association, OverDue, Images, Comments, Documents, Priority, Cause, project, "Report Status", "Task Group", estimated_hours)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (body.Ref, body.Status, body.Location, body.Description, body.Created, body.Target, body.Type, body.To_Package, body.Status_Changed, body.Association, 1 if body.OverDue else 0, "", "", "", body.Priority, body.Cause, body.project, body.Report_Status, body.Task_Group, body.estimated_hours))
+        db.commit()
+    return {"message": "Task created successfully"}
+
+@router.put("/tasks/{task_id}")
+def update_task(task_id: int, body: TaskCreateOrUpdate, user=Depends(require("projects_write"))):
+    with _connect() as db:
+        exist = db.execute("SELECT 1 FROM tasks WHERE id = ?", (task_id,)).fetchone()
+        if not exist: raise HTTPException(404, "Task not found")
+        if not db.execute("SELECT 1 FROM projects WHERE id = ?", (body.project,)).fetchone():
+            raise HTTPException(400, "Referenced project does not exist")
+        db.execute("""
+            UPDATE tasks SET Ref = ?, Status = ?, Location = ?, Description = ?, Created = ?, Target = ?, Type = ?, "To Package" = ?, "Status Changed" = ?, Association = ?, OverDue = ?, Priority = ?, Cause = ?, project = ?, "Report Status" = ?, "Task Group" = ?, estimated_hours = ?
+            WHERE id = ?
+        """, (body.Ref, body.Status, body.Location, body.Description, body.Created, body.Target, body.Type, body.To_Package, body.Status_Changed, body.Association, 1 if body.OverDue else 0, body.Priority, body.Cause, body.project, body.Report_Status, body.Task_Group, body.estimated_hours, task_id))
+        db.commit()
+    return {"message": "Task updated successfully"}
+
+@router.patch("/tasks/{task_id}/status")
+def update_task_status(task_id: int, body: TaskStatusUpdate, user=Depends(require("projects_write"))):
+    with _connect() as db:
+        if not db.execute("SELECT 1 FROM tasks WHERE id = ?", (task_id,)).fetchone():
+            raise HTTPException(404, "Task not found")
+        db.execute('UPDATE tasks SET Status = ?, "Status Changed" = ? WHERE id = ?',
+                   (body.status.strip(), datetime.now(timezone.utc).isoformat(), task_id))
+        db.commit()
+    return {"message": "Task status updated successfully"}
+
+# 3. Employee CRUD
+@router.post("/employees", status_code=201)
+def create_employee(body: EmployeeCreateOrUpdate, user=Depends(require("employees_write"))):
+    with _connect() as db:
+        emp_id = db.execute("SELECT MAX(employee_id) FROM employees").fetchone()[0] or 0
+        new_id = emp_id + 1
+        db.execute("""
+            INSERT INTO employees (employee_id, department, role_level, monthly_salary, avg_weekly_hours, projects_handled, performance_rating, absences_days, job_satisfaction, attrition, skills, capacity, availability, employment_status)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (new_id, body.department, body.role_level, body.monthly_salary, body.avg_weekly_hours, body.projects_handled, body.performance_rating, body.absences_days, body.job_satisfaction, body.attrition, body.skills, body.capacity, body.availability, body.employment_status))
+        db.commit()
+    return {"message": "Employee added successfully", "employee_id": new_id}
+
+@router.put("/employees/{employee_id}")
+def update_employee(employee_id: int, body: EmployeeCreateOrUpdate, user=Depends(require("employees_write"))):
+    with _connect() as db:
+        exist = db.execute("SELECT 1 FROM employees WHERE employee_id = ?", (employee_id,)).fetchone()
+        if not exist: raise HTTPException(404, "Employee not found")
+        db.execute("""
+            UPDATE employees SET department = ?, role_level = ?, monthly_salary = ?, avg_weekly_hours = ?, projects_handled = ?, performance_rating = ?, absences_days = ?, job_satisfaction = ?, attrition = ?, skills = ?, capacity = ?, availability = ?, employment_status = ?
+            WHERE employee_id = ?
+        """, (body.department, body.role_level, body.monthly_salary, body.avg_weekly_hours, body.projects_handled, body.performance_rating, body.absences_days, body.job_satisfaction, body.attrition, body.skills, body.capacity, body.availability, body.employment_status, employee_id))
+        db.commit()
+    return {"message": "Employee updated successfully"}
+
+# 4. Assignments
+@router.get("/projects/{project_id}/assignments")
+def get_project_assignments(project_id: str, user=Depends(require("projects"))):
+    with _connect() as db:
+        rows = db.execute("""
+            SELECT e.employee_id, e.department, e.role_level, e.skills
+            FROM project_assignments pa
+            JOIN employees e ON pa.employee_id = e.employee_id
+            WHERE pa.project_id = ?
+        """, (project_id,)).fetchall()
+        return [dict(r) for r in rows]
+
+@router.post("/projects/{project_id}/assign")
+def assign_employee_to_project(project_id: str, body: AssignmentRequest, user=Depends(require("projects_write"))):
+    with _connect() as db:
+        proj = db.execute("SELECT 1 FROM projects WHERE id = ?", (project_id,)).fetchone()
+        if not proj: raise HTTPException(404, "Project not found")
+        emp = db.execute("SELECT 1 FROM employees WHERE employee_id = ?", (body.employee_id,)).fetchone()
+        if not emp: raise HTTPException(404, "Employee not found")
+        try:
+            db.execute("INSERT INTO project_assignments (project_id, employee_id) VALUES (?, ?)", (project_id, body.employee_id))
+            db.commit()
+        except sqlite3.IntegrityError:
+            pass
+    return {"message": "Employee assigned to project successfully"}
+
+@router.post("/projects/{project_id}/unassign")
+def unassign_employee_from_project(project_id: str, body: AssignmentRequest, user=Depends(require("projects_write"))):
+    with _connect() as db:
+        db.execute("DELETE FROM project_assignments WHERE project_id = ? AND employee_id = ?", (project_id, body.employee_id))
+        db.commit()
+    return {"message": "Employee unassigned from project successfully"}
+
+@router.post("/tasks/{task_id}/assign")
+def assign_employee_to_task(task_id: int, body: AssignmentRequest, user=Depends(require("projects_write"))):
+    with _connect() as db:
+        task = db.execute("SELECT id, estimated_hours FROM tasks WHERE id = ?", (task_id,)).fetchone()
+        if not task: raise HTTPException(404, "Task not found")
+        emp = db.execute("SELECT 1 FROM employees WHERE employee_id = ?", (body.employee_id,)).fetchone()
+        if not emp: raise HTTPException(404, "Employee not found")
+        
+        assigned_hours = body.assigned_hours if body.assigned_hours is not None else task["estimated_hours"]
+        try:
+            db.execute("INSERT INTO task_assignments (task_id, employee_id, assigned_hours) VALUES (?, ?, ?)", (task_id, body.employee_id, assigned_hours))
+        except sqlite3.IntegrityError:
+            db.execute("UPDATE task_assignments SET employee_id = ?, assigned_hours = ? WHERE task_id = ?", (body.employee_id, assigned_hours, task_id))
+        db.commit()
+    return {"message": "Employee assigned to task successfully"}
+
+@router.post("/tasks/{task_id}/unassign")
+def unassign_employee_from_task(task_id: int, body: AssignmentRequest, user=Depends(require("projects_write"))):
+    with _connect() as db:
+        db.execute("DELETE FROM task_assignments WHERE task_id = ? AND employee_id = ?", (task_id, body.employee_id))
+        db.commit()
+    return {"message": "Employee unassigned from task successfully"}
