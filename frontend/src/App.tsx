@@ -5,6 +5,7 @@ import { KPI, Badge, Table } from './components/UI';
 import { Chart } from './components/Chart';
 import {
   LayoutDashboard,
+  ListTodo,
   Home,
   BarChart3,
   AlertTriangle,
@@ -34,8 +35,7 @@ import {
   Lock,
   UserCircle,
   AlertOctagon,
-  Shield,
-  Lightbulb
+  Shield
 } from 'lucide-react';
 
 const permissions: Record<string, string[]> = {
@@ -50,13 +50,17 @@ const permissions: Record<string, string[]> = {
     'Attrition Prediction',
     'Project Details',
     'Employee Details',
-    'User Management'
+    'User Management',
+    'Employee Management'
   ],
   'Project Manager': [
     'Home',
     'Dashboard',
+    'Project Management',
     'Project Analytics',
     'Project Risk',
+    'Task Management',
+    'Resource Management',
     'Resource Recommendation',
     'What-If Simulation',
     'Project Details'
@@ -66,9 +70,10 @@ const permissions: Record<string, string[]> = {
     'Dashboard',
     'Workforce Analytics',
     'Attrition Prediction',
-    'Employee Details'
+    'Employee Details',
+    'Employee Management'
   ],
-  Employee: ['Home', 'Dashboard', 'My Work']
+  Employee: ['Home', 'Dashboard', 'My Projects', 'My Tasks', 'My Workload']
 };
 
 const labels: Record<string, string> = {
@@ -87,13 +92,15 @@ const labels: Record<string, string> = {
 const navGroups = [
   {
     title: 'Overview',
-    items: [{ name: 'Dashboard', icon: LayoutDashboard }]
+    items: [{ name: 'Home', icon: Home }, { name: 'Dashboard', icon: LayoutDashboard }]
   },
   {
     title: 'Project Intelligence',
     items: [
       { name: 'Project Analytics', icon: BarChart3 },
+      { name: 'Project Management', icon: FolderKanban },
       { name: 'Project Details', icon: FolderKanban },
+      { name: 'Task Management', icon: ListTodo },
       { name: 'Project Risk', icon: AlertTriangle }
     ]
   },
@@ -101,17 +108,19 @@ const navGroups = [
     title: 'Workforce Intelligence',
     items: [
       { name: 'Workforce Analytics', icon: Users },
-      { name: 'Employee Details', icon: Contact }
+      { name: 'Employee Details', icon: Contact },
+      { name: 'Employee Management', icon: UserCheck }
     ]
   },
   {
     title: 'My Workspace',
-    items: [{ name: 'My Work', icon: UserCircle }]
+    items: [{ name: 'My Projects', icon: FolderKanban }, { name: 'My Tasks', icon: ListTodo }, { name: 'My Workload', icon: UserCircle }, { name: 'My Work', icon: UserCircle }]
   },
   {
     title: 'Simulations & ML',
     items: [
       { name: 'Resource Recommendation', icon: UserCheck },
+      { name: 'Resource Management', icon: Users2 },
       { name: 'What-If Simulation', icon: Brain },
       { name: 'Attrition Prediction', icon: ShieldAlert }
     ]
@@ -137,7 +146,7 @@ function Landing({ onExplore, onSignIn }: { onExplore: () => void; onSignIn: () 
 
       {/* Header */}
       <header className="relative z-10 mx-auto w-full max-w-7xl flex items-center justify-between px-6 py-6 lg:px-10">
-        <a href="#home" className="flex items-center gap-3" aria-label="KSHAMTA home">
+        <a href="#" className="flex items-center gap-3" aria-label="KSHAMTA landing page">
           <img src="/logo.svg" alt="KSHAMTA" className="h-11 rounded-xl bg-white p-1 shadow-md shadow-white/5" />
           <span className="hidden text-lg font-black tracking-wide sm:block">KSHAMTA</span>
         </a>
@@ -145,14 +154,14 @@ function Landing({ onExplore, onSignIn }: { onExplore: () => void; onSignIn: () 
           {menuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
         </button>
         <nav aria-label="Public navigation" className={`${menuOpen ? 'absolute left-6 right-6 top-20 flex' : 'hidden'} z-20 flex-col gap-1 rounded-2xl border border-slate-700 bg-slate-900 p-3 text-sm font-semibold shadow-2xl md:static md:flex md:flex-row md:items-center md:gap-5 md:border-0 md:bg-transparent md:p-0 md:shadow-none`}>
-          <a href="#home" onClick={() => setMenuOpen(false)} className="rounded-lg px-3 py-2 text-white hover:bg-white/5">Home</a>
+          <a href="#" onClick={() => setMenuOpen(false)} className="rounded-lg px-3 py-2 text-white hover:bg-white/5">Home</a>
           {['Project Analytics', 'Project Details', 'Project Risk', 'Workforce Analytics', 'Employee Details', 'Resource Management'].map((item) => <button key={item} onClick={() => { setMenuOpen(false); onSignIn(); }} className="rounded-lg px-3 py-2 text-left text-slate-300 hover:bg-white/5 hover:text-white md:px-0">{item}</button>)}
           <button onClick={() => { setMenuOpen(false); onSignIn(); }} className="rounded-xl border border-slate-700 bg-slate-900/40 px-5 py-2.5 text-white hover:border-indigo-400 hover:bg-slate-900">Sign In</button>
         </nav>
       </header>
 
       {/* Hero Section */}
-      <section id="home" className="relative z-10 mx-auto w-full max-w-7xl grid gap-14 px-6 pb-16 pt-10 lg:grid-cols-[1.1fr_.9fr] lg:items-center lg:px-10 lg:pb-24 lg:pt-16">
+      <section className="relative z-10 mx-auto w-full max-w-7xl grid gap-14 px-6 pb-16 pt-10 lg:grid-cols-[1.1fr_.9fr] lg:items-center lg:px-10 lg:pb-24 lg:pt-16">
         <div>
           <div className="inline-flex items-center gap-2 rounded-full border border-indigo-500/20 bg-indigo-500/10 px-4 py-1.5 text-xs font-bold uppercase tracking-wider text-indigo-400">
             <Sparkles className="h-3.5 w-3.5" />
@@ -224,48 +233,6 @@ function Landing({ onExplore, onSignIn }: { onExplore: () => void; onSignIn: () 
         </div>
       </section>
 
-      {/* Capabilities Section */}
-      <section id="capabilities" className="bg-white px-6 py-20 text-slate-900 border-t border-slate-100">
-        <div className="mx-auto max-w-7xl">
-          <div className="text-center max-w-2xl mx-auto">
-            <p className="text-xs font-bold uppercase tracking-wider text-indigo-600">Built for Action</p>
-            <h2 className="mt-3 text-3xl font-extrabold sm:text-4xl text-slate-900">Decisions Powered by Real Analytics</h2>
-          </div>
-          <div className="mt-14 grid auto-rows-fr gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            <Feature
-              icon={<FolderKanban className="h-6 w-6 text-indigo-600" />}
-              title="Project Analytics"
-              text="Monitor task completion, project performance, workflow status, and operational metrics."
-            />
-            <Feature
-              icon={<AlertTriangle className="h-6 w-6 text-rose-600" />}
-              title="Project Risk"
-              text="Identify overdue activities, high-priority issues, and potential project risks."
-            />
-            <Feature
-              icon={<Brain className="h-6 w-6 text-purple-600" />}
-              title="Workforce Analytics"
-              text="Understand employee workload, performance, capacity, and workforce trends."
-            />
-            <Feature
-              icon={<Sliders className="h-6 w-6 text-teal-600" />}
-              title="Resource Management"
-              text="Monitor resource allocation and identify workload imbalance."
-            />
-            <Feature
-              icon={<Contact className="h-6 w-6 text-sky-600" />}
-              title="Employee Details"
-              text="View employee-level workload and performance information."
-            />
-            <Feature
-              icon={<Lightbulb className="h-6 w-6 text-amber-500" />}
-              title="Intelligent Insights"
-              text="Use data-driven insights to support better project and workforce decisions."
-            />
-          </div>
-        </div>
-      </section>
-
       {/* Demo Roles Info */}
       <section id="roles" className="bg-slate-50 px-6 py-16 text-slate-900 border-t border-slate-250/20">
         <div className="mx-auto max-w-7xl flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
@@ -283,20 +250,6 @@ function Landing({ onExplore, onSignIn }: { onExplore: () => void; onSignIn: () 
         </div>
       </section>
     </main>
-  );
-}
-
-function Feature({ icon, title, text }: { icon: React.ReactNode; title: string; text: string }) {
-  return (
-    <article className="flex h-full flex-col gap-4 rounded-2xl border border-slate-100 bg-white p-6 shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:shadow-md">
-      <div className="rounded-xl bg-slate-50 w-12 h-12 flex items-center justify-center border border-slate-100">
-        {icon}
-      </div>
-      <div>
-        <h3 className="text-lg font-bold text-slate-900">{title}</h3>
-        <p className="mt-2 text-sm leading-relaxed text-slate-500">{text}</p>
-      </div>
-    </article>
   );
 }
 
@@ -495,6 +448,23 @@ function Dashboard() {
       </div>
     </Page>
   );
+}
+
+function RoleHome({ role, onNavigate }: { role: User['role']; onNavigate: (page: string) => void }) {
+  const [data, setData] = useState<any>();
+  const [error, setError] = useState('');
+  useEffect(() => {
+    const load = role === 'Employee' ? api.myWork() : role === 'HR Manager' ? Promise.all([api.workforce(), api.employees()]) : Promise.all([api.dashboard(), api.projects()]);
+    load.then((value) => setData(value)).catch((e) => setError(e.message));
+  }, [role]);
+  if (!data) return error ? <Page title={`${role} Home`} subtitle={error}><div className="rounded-xl bg-rose-50 p-4 text-sm text-rose-700">{error}</div></Page> : <Loading />;
+  if (role === 'Employee') return <Page title="Employee Home" subtitle="Your assigned projects, tasks, workload, and current status at a glance."><div className="grid gap-4 sm:grid-cols-3"><KPI label="My Projects" value={data.projects.length} /><KPI label="My Tasks" value={data.tasks.length} /><KPI label="My Workload" value={`${data.tasks.reduce((sum: number, task: any) => sum + Number(task.assigned_hours || 0), 0)} hrs`} /></div><div className="mt-8 grid gap-6 lg:grid-cols-2"><section><h2 className="mb-4 text-sm font-bold uppercase tracking-wider text-slate-400">Assigned Projects</h2><Table rows={data.projects} /></section><section><h2 className="mb-4 text-sm font-bold uppercase tracking-wider text-slate-400">Assigned Tasks</h2><Table rows={data.tasks} /></section></div><HomeShortcuts items={[['My Projects', 'Review assigned project records.'], ['My Tasks', 'Update permitted task status.'], ['My Workload', 'View your current workload.']]} onNavigate={onNavigate} /></Page>;
+  if (role === 'HR Manager') { const workforce = data[0]; const employees = data[1]; return <Page title="HR Manager Home" subtitle="Workforce capacity, workload, and employee operations overview."><div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4"><KPI label="Total Employees" value={workforce.metrics.total_employees} /><KPI label="Average Weekly Hours" value={workforce.metrics.average_weekly_hours} /><KPI label="Average Performance" value={workforce.metrics.average_performance_rating} /><KPI label="Attrition Rate" value={`${workforce.metrics.attrition_rate}%`} /></div><div className="mt-8 grid gap-6 lg:grid-cols-2"><section><h2 className="mb-4 text-sm font-bold uppercase tracking-wider text-slate-400">Workforce Snapshot</h2><Table rows={workforce.charts.employees_by_department} /></section><section><h2 className="mb-4 text-sm font-bold uppercase tracking-wider text-slate-400">Employee Records</h2><Table rows={employees.slice(0, 8)} /></section></div><HomeShortcuts items={[['Workforce Analytics', 'Review capacity and workforce trends.'], ['Employee Details', 'Open employee-level information.'], ['Employee Management', 'Add or edit workforce records.']]} onNavigate={onNavigate} /></Page>; }
+  const dashboard = data[0]; const projects = data[1]; return <Page title={role === 'Admin' ? 'Admin Home' : 'Project Manager Home'} subtitle={role === 'Admin' ? 'System, project, and workforce intelligence overview.' : 'Project delivery, tasks, assignments, and resource overview.'}><div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">{Object.entries(dashboard.metrics).slice(0, role === 'Admin' ? 8 : 6).map(([key, value]) => <KPI key={key} label={labels[key] || key.replaceAll('_', ' ')} value={key.includes('rate') ? `${value}%` : value} />)}</div><div className="mt-8 grid gap-6 lg:grid-cols-2"><section><h2 className="mb-4 text-sm font-bold uppercase tracking-wider text-slate-400">{role === 'Admin' ? 'Important Project Risks' : 'Current Project Portfolio'}</h2><Table rows={role === 'Admin' ? dashboard.top_risks : projects.slice(0, 8)} /></section><section><h2 className="mb-4 text-sm font-bold uppercase tracking-wider text-slate-400">Task and Resource Overview</h2><Table rows={role === 'Admin' ? dashboard.top_risks.slice(0, 5) : projects.slice(0, 5)} /></section></div><HomeShortcuts items={role === 'Admin' ? [['Project Analytics', 'Monitor project performance metrics.'], ['Project Risk', 'Review operational risk indicators.'], ['Workforce Analytics', 'Open workforce intelligence.'], ['User Management', 'Manage platform accounts.']] : [['Project Management', 'Create and update live projects.'], ['Task Management', 'Manage tasks and statuses.'], ['Resource Management', 'Review project assignments.'], ['Resource Recommendation', 'Find suitable resources.']]} onNavigate={onNavigate} /></Page>;
+}
+
+function HomeShortcuts({ items, onNavigate }: { items: string[][]; onNavigate: (page: string) => void }) {
+  return <div className="mt-8"><h2 className="mb-4 text-sm font-bold uppercase tracking-wider text-slate-400">Useful shortcuts</h2><div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">{items.map(([title, text]) => <button key={title} onClick={() => onNavigate(title)} className="rounded-2xl border border-slate-100 bg-white p-5 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-indigo-200 hover:shadow-md"><span className="text-sm font-bold text-slate-800">{title}</span><span className="mt-2 block text-xs leading-relaxed text-slate-500">{text}</span><span className="mt-4 block text-xs font-bold text-indigo-600">Open →</span></button>)}</div></div>;
 }
 
 function Projects({ detail = false, canEdit = false }: { detail?: boolean; canEdit?: boolean }) {
@@ -1668,7 +1638,7 @@ export default function App() {
   });
 
   const [entry, setEntry] = useState<'landing' | 'chooser' | 'login'>('landing');
-  const [page, setPage] = useState('Dashboard');
+  const [page, setPage] = useState('Home');
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   if (!user) {
@@ -1707,17 +1677,26 @@ export default function App() {
   }
 
   const activeUser = user;
+  const goToPage = (target: string) => setPage(target);
   const content: any = {
+    Home: <RoleHome role={activeUser.role} onNavigate={goToPage} />,
     Dashboard: <Dashboard />,
+    'Project Management': <Projects canEdit={!demoRole} />,
     'Project Analytics': <Projects canEdit={!demoRole} />,
     'Project Risk': <Risk />,
+    'Task Management': <Projects detail canEdit={!demoRole} />,
+    'Resource Management': <Resource />,
     'Workforce Analytics': <Workforce />,
     'Resource Recommendation': <Resource />,
     'What-If Simulation': <WhatIf />,
     'Attrition Prediction': <Attrition />,
     'Project Details': <Projects detail canEdit={!demoRole} />,
     'Employee Details': <Employees canEdit={!demoRole} />,
+    'Employee Management': <Employees canEdit={!demoRole} />,
     'My Work': <MyWork />,
+    'My Projects': <MyWork />,
+    'My Tasks': <MyWork />,
+    'My Workload': <MyWork />,
     'User Management': <UserManagement readOnly={!!demoRole} />
   };
 
@@ -1730,7 +1709,7 @@ export default function App() {
     setUser(null);
     setDemoRole(null);
     setEntry('landing');
-    setPage('Dashboard');
+    setPage('Home');
   };
 
   const allowedPages = permissions[activeUser.role];
