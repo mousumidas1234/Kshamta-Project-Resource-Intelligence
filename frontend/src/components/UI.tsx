@@ -71,7 +71,7 @@ export function KPI({ label, value }: { label: string; value: any }) {
   const colors = getColorsForLabel(label);
 
   return (
-    <div className={`rounded-2xl border border-slate-100/70 p-5 bg-white shadow-sm card-design flex items-center justify-between gap-4 min-w-0 w-full hover:shadow-md transition-all duration-300`}>
+    <div className={`flex min-h-[112px] w-full min-w-0 items-center justify-between gap-4 rounded-2xl border border-slate-100/70 bg-white p-5 shadow-sm card-design transition-all duration-300 hover:shadow-md`}>
       <div className="flex-1 min-w-0">
         <p className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 whitespace-normal break-words leading-tight">
           {label}

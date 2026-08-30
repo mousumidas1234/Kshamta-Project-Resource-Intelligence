@@ -34,7 +34,8 @@ import {
   Lock,
   UserCircle,
   AlertOctagon,
-  Shield
+  Shield,
+  Lightbulb
 } from 'lucide-react';
 
 const permissions: Record<string, string[]> = {
@@ -121,64 +122,63 @@ const navGroups = [
   }
 ];
 
+function CosmicBackdrop() {
+  return <div aria-hidden="true" className="cosmic-backdrop"><i /><i /><i /><i /><i /><i /><i /><i /></div>;
+}
+
 function Landing({ onExplore, onSignIn }: { onExplore: () => void; onSignIn: () => void }) {
+  const [menuOpen, setMenuOpen] = useState(false);
   return (
     <main className="min-h-screen overflow-hidden bg-slate-950 text-white relative flex flex-col justify-between">
+      <CosmicBackdrop />
       {/* Background Decorative Blobs */}
       <div className="pointer-events-none absolute -left-40 -top-20 h-[500px] w-[500px] rounded-full bg-indigo-500/10 blur-3xl" />
       <div className="pointer-events-none absolute right-20 bottom-10 h-[500px] w-[500px] rounded-full bg-teal-500/10 blur-3xl" />
 
       {/* Header */}
       <header className="relative z-10 mx-auto w-full max-w-7xl flex items-center justify-between px-6 py-6 lg:px-10">
-        <div className="flex items-center gap-3">
-          <img src="/logo.svg" className="h-11 rounded-xl bg-white p-1 shadow-md shadow-white/5" />
-        </div>
-        <nav className="hidden items-center gap-8 text-sm font-semibold text-slate-350 md:flex">
-          <a href="#capabilities" className="hover:text-white transition-colors">Capabilities</a>
-          <a href="#roles" className="hover:text-white transition-colors">Demo Roles</a>
-          <button
-            onClick={onSignIn}
-            className="rounded-xl border border-slate-700 bg-slate-900/40 px-5 py-2.5 text-white hover:bg-slate-900 hover:border-indigo-400 hover:shadow-md hover:shadow-indigo-500/10 transition-all duration-200 cursor-pointer"
-          >
-            Sign In
-          </button>
-        </nav>
-        <button
-          onClick={onSignIn}
-          className="rounded-xl border border-slate-700 bg-slate-900/40 px-4 py-2 text-sm font-semibold text-white md:hidden hover:border-indigo-400"
-        >
-          Sign In
+        <a href="#home" className="flex items-center gap-3" aria-label="KSHAMTA home">
+          <img src="/logo.svg" alt="KSHAMTA" className="h-11 rounded-xl bg-white p-1 shadow-md shadow-white/5" />
+          <span className="hidden text-lg font-black tracking-wide sm:block">KSHAMTA</span>
+        </a>
+        <button aria-label={menuOpen ? 'Close navigation menu' : 'Open navigation menu'} aria-expanded={menuOpen} onClick={() => setMenuOpen(!menuOpen)} className="rounded-xl border border-slate-700 p-2 text-slate-300 hover:border-indigo-400 hover:text-white md:hidden">
+          {menuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
         </button>
+        <nav aria-label="Public navigation" className={`${menuOpen ? 'absolute left-6 right-6 top-20 flex' : 'hidden'} z-20 flex-col gap-1 rounded-2xl border border-slate-700 bg-slate-900 p-3 text-sm font-semibold shadow-2xl md:static md:flex md:flex-row md:items-center md:gap-5 md:border-0 md:bg-transparent md:p-0 md:shadow-none`}>
+          <a href="#home" onClick={() => setMenuOpen(false)} className="rounded-lg px-3 py-2 text-white hover:bg-white/5">Home</a>
+          {['Project Analytics', 'Project Details', 'Project Risk', 'Workforce Analytics', 'Employee Details', 'Resource Management'].map((item) => <button key={item} onClick={() => { setMenuOpen(false); onSignIn(); }} className="rounded-lg px-3 py-2 text-left text-slate-300 hover:bg-white/5 hover:text-white md:px-0">{item}</button>)}
+          <button onClick={() => { setMenuOpen(false); onSignIn(); }} className="rounded-xl border border-slate-700 bg-slate-900/40 px-5 py-2.5 text-white hover:border-indigo-400 hover:bg-slate-900">Sign In</button>
+        </nav>
       </header>
 
       {/* Hero Section */}
-      <section className="relative z-10 mx-auto w-full max-w-7xl grid gap-14 px-6 pb-16 pt-10 lg:grid-cols-[1.1fr_.9fr] lg:items-center lg:px-10 lg:pb-24 lg:pt-16">
+      <section id="home" className="relative z-10 mx-auto w-full max-w-7xl grid gap-14 px-6 pb-16 pt-10 lg:grid-cols-[1.1fr_.9fr] lg:items-center lg:px-10 lg:pb-24 lg:pt-16">
         <div>
           <div className="inline-flex items-center gap-2 rounded-full border border-indigo-500/20 bg-indigo-500/10 px-4 py-1.5 text-xs font-bold uppercase tracking-wider text-indigo-400">
             <Sparkles className="h-3.5 w-3.5" />
             <span>Enterprise Intelligence Hub</span>
           </div>
           <h1 className="mt-6 max-w-3xl text-4xl font-extrabold leading-tight tracking-tight sm:text-6xl text-white">
-            Project Intelligence <br />
+            KSHAMTA <br />
             <span className="bg-gradient-to-r from-indigo-400 via-sky-400 to-teal-400 bg-clip-text text-transparent">
-              &amp; Resource Analytics
+              Intelligent Project &amp; Workforce Management
             </span>
           </h1>
           <p className="mt-6 max-w-2xl text-base sm:text-lg leading-relaxed text-slate-350">
-            KSHAMTA integrates operational project statistics, risk analytics, simulated workforce matching, and machine learning-powered attrition forecasting into one real-time enterprise management platform.
+            KSHAMTA provides intelligent project, workforce, risk, and resource insights to help teams monitor performance, identify bottlenecks, and make better operational decisions.
           </p>
           <div className="mt-10 flex flex-wrap gap-4">
             <button
               onClick={onExplore}
               className="rounded-xl bg-gradient-to-r from-indigo-500 to-indigo-600 px-6 py-4 text-sm font-bold text-white shadow-lg shadow-indigo-500/20 hover:from-indigo-600 hover:to-indigo-700 hover:shadow-xl hover:translate-y-[-1px] transition-all cursor-pointer flex items-center gap-2"
             >
-              Explore Demo Sandbox <ArrowRight className="h-4 w-4" />
+              Explore Dashboard <ArrowRight className="h-4 w-4" />
             </button>
             <button
               onClick={onSignIn}
               className="rounded-xl border border-slate-750 bg-slate-900/30 px-6 py-4 text-sm font-bold text-white hover:bg-slate-900 hover:border-indigo-400 transition-all cursor-pointer"
             >
-              Access Account
+              View Project Analytics
             </button>
           </div>
         </div>
@@ -231,21 +231,36 @@ function Landing({ onExplore, onSignIn }: { onExplore: () => void; onSignIn: () 
             <p className="text-xs font-bold uppercase tracking-wider text-indigo-600">Built for Action</p>
             <h2 className="mt-3 text-3xl font-extrabold sm:text-4xl text-slate-900">Decisions Powered by Real Analytics</h2>
           </div>
-          <div className="mt-14 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="mt-14 grid auto-rows-fr gap-6 sm:grid-cols-2 lg:grid-cols-3">
             <Feature
               icon={<FolderKanban className="h-6 w-6 text-indigo-600" />}
-              title="Project Intelligence"
-              text="Monitor project deadlines, task completions, and identify operational blockers with customized risk metrics."
+              title="Project Analytics"
+              text="Monitor task completion, project performance, workflow status, and operational metrics."
             />
             <Feature
-              icon={<Sliders className="h-6 w-6 text-teal-650" />}
-              title="Simulated Resource Recommendation"
-              text="Score employee credentials and availability dynamically against project requirements without affecting historical logs."
+              icon={<AlertTriangle className="h-6 w-6 text-rose-600" />}
+              title="Project Risk"
+              text="Identify overdue activities, high-priority issues, and potential project risks."
             />
             <Feature
               icon={<Brain className="h-6 w-6 text-purple-600" />}
-              title="Workforce & Attrition Predictor"
-              text="Forecast attrition probabilities using scikit-learn models based on satisfaction levels, performance history, and salary."
+              title="Workforce Analytics"
+              text="Understand employee workload, performance, capacity, and workforce trends."
+            />
+            <Feature
+              icon={<Sliders className="h-6 w-6 text-teal-600" />}
+              title="Resource Management"
+              text="Monitor resource allocation and identify workload imbalance."
+            />
+            <Feature
+              icon={<Contact className="h-6 w-6 text-sky-600" />}
+              title="Employee Details"
+              text="View employee-level workload and performance information."
+            />
+            <Feature
+              icon={<Lightbulb className="h-6 w-6 text-amber-500" />}
+              title="Intelligent Insights"
+              text="Use data-driven insights to support better project and workforce decisions."
             />
           </div>
         </div>
@@ -273,7 +288,7 @@ function Landing({ onExplore, onSignIn }: { onExplore: () => void; onSignIn: () 
 
 function Feature({ icon, title, text }: { icon: React.ReactNode; title: string; text: string }) {
   return (
-    <article className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm hover:shadow-md transition-all duration-350 flex flex-col gap-4">
+    <article className="flex h-full flex-col gap-4 rounded-2xl border border-slate-100 bg-white p-6 shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:shadow-md">
       <div className="rounded-xl bg-slate-50 w-12 h-12 flex items-center justify-center border border-slate-100">
         {icon}
       </div>
@@ -490,6 +505,10 @@ function Projects({ detail = false, canEdit = false }: { detail?: boolean; canEd
   const [employees, setEmployees] = useState<any[]>([]);
   const [assignments, setAssignments] = useState<any[]>([]);
   const [selectedEmployee, setSelectedEmployee] = useState('');
+  const [showProjectForm, setShowProjectForm] = useState(false);
+  const [projectForm, setProjectForm] = useState({ id: '', name: '', status: 'Active', priority: 'Medium', deadline: '' });
+  const [taskForm, setTaskForm] = useState<any>({ Ref: '', Status: 'Open', Location: '', Description: '', Created: new Date().toISOString().slice(0, 10), Target: '', Type: '', 'To Package': '', 'Status Changed': '', Association: '', OverDue: false, Priority: 'Medium', Cause: '', project: '', 'Report Status': '', 'Task Group': '', estimated_hours: 8 });
+  const [editingTask, setEditingTask] = useState<number | null>(null);
 
   useEffect(() => {
     api.analytics().then(setD);
@@ -504,6 +523,18 @@ function Projects({ detail = false, canEdit = false }: { detail?: boolean; canEd
     if (!project || !selectedEmployee) return;
     try { await api.assignProjectEmployee(project, Number(selectedEmployee)); setAssignments(await api.getProjectAssignments(project)); setSelectedEmployee(''); }
     catch (e: any) { window.alert(e.message || 'Assignment failed.'); }
+  };
+
+  const saveNewProject = async (event: React.FormEvent) => {
+    event.preventDefault();
+    try { await api.createProject({ ...projectForm, deadline: projectForm.deadline || null }); setD(await api.analytics()); setShowProjectForm(false); setProjectForm({ id: '', name: '', status: 'Active', priority: 'Medium', deadline: '' }); }
+    catch (e: any) { window.alert(e.message || 'Project creation failed.'); }
+  };
+
+  const saveTask = async (event: React.FormEvent) => {
+    event.preventDefault();
+    try { const payload = { ...taskForm, project: taskForm.project || d.project, deadline: undefined }; if (editingTask) await api.updateTask(editingTask, payload); else await api.createTask(payload); setD(await api.project(d.project)); setEditingTask(null); setTaskForm({ ...taskForm, project: d.project, Ref: '', Description: '' }); }
+    catch (e: any) { window.alert(e.message || 'Task save failed.'); }
   };
 
   const saveProject = async () => {
@@ -586,7 +617,7 @@ function Projects({ detail = false, canEdit = false }: { detail?: boolean; canEd
                 <div className="mt-6 border-t border-indigo-100 pt-5">
                   <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Assigned Resources</p>
                   <div className="mt-3 flex flex-col gap-3 sm:flex-row"><select aria-label="Select employee to assign" value={selectedEmployee} onChange={(e) => setSelectedEmployee(e.target.value)} className="min-w-0 flex-1 rounded-xl border border-slate-200 bg-white p-3 text-sm text-slate-800"><option value="">Select employee…</option>{employees.filter((e) => !assignments.some((a) => String(a.employee_id) === String(e.employee_id))).map((e) => <option key={e.employee_id} value={e.employee_id}>#{e.employee_id} · {e.department} · {e.role_level}</option>)}</select><button onClick={assignEmployee} disabled={!selectedEmployee} className="rounded-xl bg-teal-600 px-4 py-3 text-sm font-bold text-white disabled:opacity-50">Assign Resource</button></div>
-                  <div className="mt-3 flex flex-wrap gap-2">{assignments.length ? assignments.map((a) => <span key={a.employee_id} className="rounded-full border border-teal-100 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700">#{a.employee_id} · {a.department} · {a.role_level}</span>) : <span className="text-xs text-slate-400">No resources assigned yet.</span>}</div>
+                  <div className="mt-3 flex flex-wrap gap-2">{assignments.length ? assignments.map((a) => <span key={a.employee_id} className="inline-flex items-center gap-2 rounded-full border border-teal-100 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700">#{a.employee_id} · {a.department} · {a.role_level}<button type="button" aria-label={`Unassign employee ${a.employee_id}`} onClick={async () => { await api.unassignProjectEmployee(project, a.employee_id); setAssignments(await api.getProjectAssignments(project)); }} className="font-black text-slate-400 hover:text-rose-600">×</button></span>) : <span className="text-xs text-slate-400">No resources assigned yet.</span>}</div>
                 </div>
               </div>
             )}
@@ -595,13 +626,14 @@ function Projects({ detail = false, canEdit = false }: { detail?: boolean; canEd
               <Table rows={breakdownRows} />
             </div>
             <div>
-              <h3 className="mb-4 text-xs font-bold uppercase tracking-wider text-slate-400">Task Log Details</h3>
+              <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"><h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">Task Log Details</h3>{canEdit && <button onClick={() => { setEditingTask(null); setTaskForm({ ...taskForm, project: d.project }); }} className="self-start rounded-xl bg-indigo-600 px-3 py-2 text-xs font-bold text-white">New Task</button>}</div>
               <Table rows={d.tasks} />
+              {canEdit && (editingTask || taskForm.project === d.project && taskForm.Ref === '') && <form onSubmit={saveTask} className="mt-4 rounded-2xl border border-indigo-100 bg-indigo-50/40 p-5"><p className="mb-4 text-xs font-bold uppercase tracking-wider text-slate-500">{editingTask ? 'Edit Task' : 'Create Task'}</p><div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4"><input required placeholder="Reference" value={taskForm.Ref} onChange={(e) => setTaskForm({ ...taskForm, Ref: e.target.value })} className="rounded-xl border border-slate-200 p-3 text-sm" /><input required placeholder="Description" value={taskForm.Description} onChange={(e) => setTaskForm({ ...taskForm, Description: e.target.value })} className="rounded-xl border border-slate-200 p-3 text-sm sm:col-span-2" /><select value={taskForm.Status} onChange={(e) => setTaskForm({ ...taskForm, Status: e.target.value })} className="rounded-xl border border-slate-200 p-3 text-sm"><option>Open</option><option>In Progress</option><option>Closed</option><option>Completed</option><option>On Hold</option></select><select value={taskForm.Priority} onChange={(e) => setTaskForm({ ...taskForm, Priority: e.target.value })} className="rounded-xl border border-slate-200 p-3 text-sm"><option>Low</option><option>Medium</option><option>High</option><option>Critical</option></select><input type="date" value={taskForm.Target || ''} onChange={(e) => setTaskForm({ ...taskForm, Target: e.target.value })} className="rounded-xl border border-slate-200 p-3 text-sm" /><input type="number" min="0" step=".5" value={taskForm.estimated_hours} onChange={(e) => setTaskForm({ ...taskForm, estimated_hours: Number(e.target.value) })} className="rounded-xl border border-slate-200 p-3 text-sm" placeholder="Estimated hours" /></div><div className="mt-4 flex gap-2"><button className="rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-bold text-white">{editingTask ? 'Save Task' : 'Create Task'}</button><button type="button" onClick={() => { setEditingTask(null); setTaskForm({ ...taskForm, project: '' }); }} className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700">Cancel</button></div></form>}
               {canEdit && d.tasks?.length > 0 && (
                 <div className="mt-4 rounded-2xl border border-slate-100 bg-white p-5 shadow-sm">
                   <p className="mb-3 text-xs font-bold uppercase tracking-wider text-slate-400">Authorized Task Status Updates</p>
                   <div className="space-y-2">
-                    {d.tasks.map((task: any) => <div key={task.id} className="flex flex-col gap-2 rounded-xl border border-slate-100 p-3 sm:flex-row sm:items-center sm:justify-between"><span className="text-sm font-semibold text-slate-700">{task.Ref || `Task ${task.id}`} <span className="font-normal text-slate-400">· {task.Description || 'No description'}</span></span><select value={task.Status || ''} disabled={savingTask === task.id} onChange={(e) => saveTaskStatus(task.id, e.target.value)} className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 sm:w-44"><option>Open</option><option>In Progress</option><option>Closed</option><option>Completed</option><option>On Hold</option></select></div>)}
+                    {d.tasks.map((task: any) => <div key={task.id} className="flex flex-col gap-2 rounded-xl border border-slate-100 p-3 sm:flex-row sm:items-center sm:justify-between"><span className="min-w-0 text-sm font-semibold text-slate-700 break-words">{task.Ref || `Task ${task.id}`} <span className="font-normal text-slate-400">· {task.Description || 'No description'}</span></span><div className="flex gap-2"><button type="button" onClick={() => { setEditingTask(task.id); setTaskForm({ ...taskForm, ...task, project: d.project, 'To Package': task['To Package'] || '', 'Status Changed': task['Status Changed'] || '' }); }} className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-indigo-600">Edit</button><select aria-label={`Status for ${task.Ref || task.id}`} value={task.Status || ''} disabled={savingTask === task.id} onChange={(e) => saveTaskStatus(task.id, e.target.value)} className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 sm:w-44"><option>Open</option><option>In Progress</option><option>Closed</option><option>Completed</option><option>On Hold</option></select></div></div>)}
                   </div>
                 </div>
               )}
@@ -619,6 +651,7 @@ function Projects({ detail = false, canEdit = false }: { detail?: boolean; canEd
 
   return (
     <Page title="Project Analytics" subtitle="Aggregate telemetry of deliverables, priorities, and workflow statuses.">
+      {canEdit && <div className="mb-6 rounded-2xl border border-indigo-100 bg-white p-5 shadow-sm"><div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"><div><h2 className="text-sm font-bold text-slate-800">Project management</h2><p className="mt-1 text-xs text-slate-500">Create and maintain live project records.</p></div><button onClick={() => setShowProjectForm(!showProjectForm)} className="rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-bold text-white">{showProjectForm ? 'Close' : 'New Project'}</button></div>{showProjectForm && <form onSubmit={saveNewProject} className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-5"><input required placeholder="Project ID" value={projectForm.id} onChange={(e) => setProjectForm({ ...projectForm, id: e.target.value })} className="rounded-xl border border-slate-200 p-3 text-sm" /><input required placeholder="Project name" value={projectForm.name} onChange={(e) => setProjectForm({ ...projectForm, name: e.target.value })} className="rounded-xl border border-slate-200 p-3 text-sm" /><select value={projectForm.status} onChange={(e) => setProjectForm({ ...projectForm, status: e.target.value })} className="rounded-xl border border-slate-200 p-3 text-sm"><option>Active</option><option>On Hold</option><option>Completed</option><option>Cancelled</option></select><select value={projectForm.priority} onChange={(e) => setProjectForm({ ...projectForm, priority: e.target.value })} className="rounded-xl border border-slate-200 p-3 text-sm"><option>Low</option><option>Medium</option><option>High</option><option>Critical</option></select><div className="flex gap-2"><input type="date" value={projectForm.deadline} onChange={(e) => setProjectForm({ ...projectForm, deadline: e.target.value })} className="min-w-0 flex-1 rounded-xl border border-slate-200 p-3 text-sm" /><button className="rounded-xl bg-teal-600 px-4 text-sm font-bold text-white">Create</button></div></form>}</div>}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         {metricCards.map(([k, v]) => (
           <KPI key={k} label={metricLabels[k]} value={k === 'completion_rate' ? `${v}%` : v} />
@@ -1103,10 +1136,13 @@ function Attrition() {
   );
 }
 
-function Employees() {
+function Employees({ canEdit = false }: { canEdit?: boolean }) {
   const [e, setE] = useState<any[]>([]);
   const [x, setX] = useState<any>();
   const [selectedId, setSelectedId] = useState('');
+  const [editing, setEditing] = useState(false);
+  const blankEmployee = { department: '', role_level: '', monthly_salary: 0, avg_weekly_hours: 0, projects_handled: 0, performance_rating: 0, absences_days: 0, job_satisfaction: 0, attrition: 'No', skills: '', capacity: 40, availability: 'Available', employment_status: 'Full-Time' };
+  const [form, setForm] = useState<any>(blankEmployee);
 
   useEffect(() => {
     api.employees().then(setE);
@@ -1115,15 +1151,22 @@ function Employees() {
   const handleSelectEmployee = (id: string) => {
     setSelectedId(id);
     if (id) {
-      api.employee(id).then(setX);
+      api.employee(id).then((value) => { setX(value); setForm({ ...blankEmployee, ...value }); });
     } else {
       setX(null);
     }
   };
 
+  const saveEmployee = async (event: React.FormEvent) => {
+    event.preventDefault();
+    try { if (selectedId && editing) await api.updateEmployee(Number(selectedId), form); else { const created = await api.createEmployee(form); setSelectedId(String(created.employee_id)); } const all = await api.employees(); setE(all); if (selectedId) api.employee(selectedId).then((value) => { setX(value); setForm({ ...blankEmployee, ...value }); }); setEditing(false); }
+    catch (error: any) { window.alert(error.message || 'Employee save failed.'); }
+  };
+
   return (
     <Page title="Employee Analytics" subtitle="Review employee credentials, performance indicators, and departments.">
-      <div className="mb-6 rounded-2xl border border-slate-100 bg-white p-5 shadow-sm max-w-md">
+      {canEdit && <div className="mb-6 flex flex-wrap gap-3"><button onClick={() => { setSelectedId(''); setX(null); setForm(blankEmployee); setEditing(true); }} className="rounded-xl bg-violet-600 px-4 py-2.5 text-sm font-bold text-white">Add Employee</button>{selectedId && <button onClick={() => setEditing(!editing)} className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700">{editing ? 'Close Editor' : 'Edit Selected Employee'}</button>}</div>}
+      <div className="mb-6 max-w-md rounded-2xl border border-slate-100 bg-white p-5 shadow-sm">
         <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">
           Select Employee ID
         </label>
@@ -1145,15 +1188,21 @@ function Employees() {
         <div className="animate-fade-in space-y-4">
           <h3 className="text-sm font-bold uppercase tracking-wider text-slate-400">Employee Details Panel</h3>
           <Table rows={[x]} />
+          {canEdit && editing && <EmployeeForm form={form} setForm={setForm} onSubmit={saveEmployee} onCancel={() => setEditing(false)} />}
         </div>
       ) : (
-        <div className="rounded-2xl border border-dashed border-slate-200 p-8 text-center bg-white shadow-sm/5">
+        canEdit && editing ? <EmployeeForm form={form} setForm={setForm} onSubmit={saveEmployee} onCancel={() => setEditing(false)} /> : <div className="rounded-2xl border border-dashed border-slate-200 p-8 text-center bg-white shadow-sm/5">
           <Contact className="mx-auto h-8 w-8 text-slate-350 mb-3" />
           <p className="text-sm font-semibold text-slate-500">Select an employee from the list to display details.</p>
         </div>
       )}
     </Page>
   );
+}
+
+function EmployeeForm({ form, setForm, onSubmit, onCancel }: { form: any; setForm: (value: any) => void; onSubmit: (event: React.FormEvent) => void; onCancel: () => void }) {
+  const field = (key: string, label: string, type = 'text') => <label className="text-xs font-bold uppercase tracking-wider text-slate-500">{label}<input required={['department', 'role_level'].includes(key)} type={type} value={form[key] ?? ''} onChange={(e) => setForm({ ...form, [key]: type === 'number' ? Number(e.target.value) : e.target.value })} className="mt-1.5 w-full rounded-xl border border-slate-200 bg-white p-2.5 text-sm font-normal normal-case tracking-normal text-slate-800" /></label>;
+  return <form onSubmit={onSubmit} className="rounded-2xl border border-violet-100 bg-violet-50/40 p-5"><p className="mb-4 text-xs font-bold uppercase tracking-wider text-slate-500">Workforce profile editor</p><div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">{field('department', 'Department')}{field('role_level', 'Role Level')}{field('skills', 'Skills')}{field('monthly_salary', 'Monthly Salary', 'number')}{field('avg_weekly_hours', 'Current Weekly Hours', 'number')}{field('projects_handled', 'Projects Handled', 'number')}{field('performance_rating', 'Performance Rating', 'number')}{field('absences_days', 'Absence Days', 'number')}{field('job_satisfaction', 'Job Satisfaction', 'number')}{field('capacity', 'Capacity Hours', 'number')}<label className="text-xs font-bold uppercase tracking-wider text-slate-500">Availability<select value={form.availability} onChange={(e) => setForm({ ...form, availability: e.target.value })} className="mt-1.5 w-full rounded-xl border border-slate-200 bg-white p-2.5 text-sm font-normal normal-case tracking-normal text-slate-800"><option>Available</option><option>Partially Available</option><option>Unavailable</option></select></label><label className="text-xs font-bold uppercase tracking-wider text-slate-500">Employment Status<select value={form.employment_status} onChange={(e) => setForm({ ...form, employment_status: e.target.value })} className="mt-1.5 w-full rounded-xl border border-slate-200 bg-white p-2.5 text-sm font-normal normal-case tracking-normal text-slate-800"><option>Full-Time</option><option>Part-Time</option><option>Contract</option><option>Inactive</option></select></label></div><div className="mt-4 flex gap-2"><button className="rounded-xl bg-violet-600 px-4 py-2.5 text-sm font-bold text-white">Save Employee</button><button type="button" onClick={onCancel} className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700">Cancel</button></div></form>;
 }
 
 function MyWork() {
@@ -1660,14 +1709,14 @@ export default function App() {
   const activeUser = user;
   const content: any = {
     Dashboard: <Dashboard />,
-    'Project Analytics': <Projects />,
+    'Project Analytics': <Projects canEdit={!demoRole} />,
     'Project Risk': <Risk />,
     'Workforce Analytics': <Workforce />,
     'Resource Recommendation': <Resource />,
     'What-If Simulation': <WhatIf />,
     'Attrition Prediction': <Attrition />,
     'Project Details': <Projects detail canEdit={!demoRole} />,
-    'Employee Details': <Employees />,
+    'Employee Details': <Employees canEdit={!demoRole} />,
     'My Work': <MyWork />,
     'User Management': <UserManagement readOnly={!!demoRole} />
   };
@@ -1693,7 +1742,8 @@ export default function App() {
     .filter((group) => group.items.length > 0);
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col lg:flex-row">
+    <div className="relative min-h-screen bg-slate-50 flex flex-col lg:flex-row">
+      <CosmicBackdrop />
       {/* Mobile Top Bar */}
       <header className="lg:hidden flex items-center justify-between bg-slate-900 text-white px-5 py-4 border-b border-slate-800 shrink-0 select-none">
         <img src="/logo.svg" className="h-8 rounded bg-white p-0.5" />
