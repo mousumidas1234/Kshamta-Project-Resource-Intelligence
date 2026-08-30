@@ -9,11 +9,13 @@ class UserCreate(BaseModel):
     password: str = Field(min_length=8, max_length=256)
     confirm_password: str
     role: str
+    employee_id: Optional[int] = None
     status: str
 class UserUpdate(BaseModel):
     full_name: str = Field(min_length=1, max_length=120)
     username: str = Field(min_length=1, max_length=80)
     role: str
+    employee_id: Optional[int] = None
     status: str
 class PasswordReset(BaseModel):
     new_password: str = Field(min_length=8, max_length=256)

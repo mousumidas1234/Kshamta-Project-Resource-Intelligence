@@ -5,6 +5,9 @@ from .config import USERS_DB_PATH, DATA_DIR
 
 def initialize_db():
     conn = sqlite3.connect(USERS_DB_PATH)
+    # Enforce the declared assignment cascades for every connection used during
+    # initialization; seed steps remain append-only and only run on empty tables.
+    conn.execute("PRAGMA foreign_keys = ON")
     cursor = conn.cursor()
     
     # 1. Create employees table
