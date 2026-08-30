@@ -3,11 +3,14 @@ from fastapi import APIRouter, Depends, HTTPException
 from datetime import datetime, timezone
 from ..core.auth import demo_login, login, require, current_user
 from ..core.users import _connect, hash_password, list_users, public_user, find, ROLES
-from ..schemas.models import LoginRequest, DemoLoginRequest, ResourceRequest, WhatIfRequest, AttritionRequest, UserCreate, UserUpdate, PasswordReset, ProjectCreate, ProjectUpdate, TaskCreateOrUpdate, TaskStatusUpdate, EmployeeCreateOrUpdate, AssignmentRequest
-from ..services import project_service, risk_service, workforce_service, resource_service, attrition_service
+from ..schemas.models import LoginRequest, DemoLoginRequest, ResourceRequest, WhatIfRequest, AttritionRequest, UserCreate, UserUpdate, PasswordReset, ProjectCreate, ProjectUpdate, TaskCreateOrUpdate, TaskStatusUpdate, EmployeeCreateOrUpdate, AssignmentRequest, AssistantChatRequest
+from ..services import project_service, risk_service, workforce_service, resource_service, attrition_service, assistant_service
 from ..services.data_service import datasets
 
 router=APIRouter(prefix="/api")
+@router.post("/assistant/chat")
+def assistant_chat(body: AssistantChatRequest, user=Depends(current_user)):
+    return {"message": assistant_service.answer(body.message, user), "role": user["role"], "provider_configured": False}
 @router.post("/auth/login")
 def auth(body: LoginRequest):
     token,user=login(body.username,body.password); record=find(user["user_id"]); return {"access_token":token,"token_type":"bearer","user":{"username":user["sub"],"role":record["role"],"employee_id":record["employee_id"]}}

@@ -81,3 +81,6 @@ class AssignmentRequest(BaseModel):
 
 class TaskStatusUpdate(BaseModel):
     status: str = Field(min_length=1, max_length=80)
+
+class AssistantChatRequest(BaseModel):
+    message: str = Field(min_length=1, max_length=1200)
