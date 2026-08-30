@@ -1,7 +1,7 @@
 import sqlite3
 from fastapi import APIRouter, Depends, HTTPException
 from datetime import datetime, timezone
-from ..core.auth import demo_login, login, require
+from ..core.auth import demo_login, login, require, current_user
 from ..core.users import _connect, hash_password, list_users, public_user, find, ROLES
 from ..schemas.models import LoginRequest, DemoLoginRequest, ResourceRequest, WhatIfRequest, AttritionRequest, UserCreate, UserUpdate, PasswordReset, ProjectCreate, ProjectUpdate, TaskCreateOrUpdate, TaskStatusUpdate, EmployeeCreateOrUpdate, AssignmentRequest
 from ..services import project_service, risk_service, workforce_service, resource_service, attrition_service
@@ -10,7 +10,7 @@ from ..services.data_service import datasets
 router=APIRouter(prefix="/api")
 @router.post("/auth/login")
 def auth(body: LoginRequest):
-    token,user=login(body.username,body.password); return {"access_token":token,"token_type":"bearer","user":{"username":user["sub"],"role":find(user["user_id"])["role"]}}
+    token,user=login(body.username,body.password); record=find(user["user_id"]); return {"access_token":token,"token_type":"bearer","user":{"username":user["sub"],"role":record["role"],"employee_id":record["employee_id"]}}
 @router.post("/auth/demo")
 def demo_auth(body: DemoLoginRequest):
     token,user=demo_login(body.role); return {"access_token":token,"token_type":"bearer","user":{"username":user["sub"],"role":user["role"],"demo":True}}
@@ -21,11 +21,12 @@ def create_user(body: UserCreate, user=Depends(require("user_management_write"))
     if body.password != body.confirm_password: raise HTTPException(400, "Passwords do not match")
     if body.role not in ROLES: raise HTTPException(400, "Invalid role")
     if body.status not in ("Active", "Inactive"): raise HTTPException(400, "Invalid status")
+    if body.role == "Employee" and body.employee_id is None: raise HTTPException(400, "Employee accounts require an employee ID")
     now = datetime.now(timezone.utc).isoformat()
     try:
         with _connect() as db:
-            cursor = db.execute("INSERT INTO users(full_name, username, password_hash, role, is_active, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
-                                (body.full_name.strip(), body.username.strip(), hash_password(body.password), body.role, body.status == "Active", now, now))
+            cursor = db.execute("INSERT INTO users(full_name, username, password_hash, role, employee_id, is_active, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                                (body.full_name.strip(), body.username.strip(), hash_password(body.password), body.role, body.employee_id, body.status == "Active", now, now))
             row = db.execute("SELECT * FROM users WHERE id = ?", (cursor.lastrowid,)).fetchone()
     except Exception as exc:
         if "UNIQUE" in str(exc).upper(): raise HTTPException(409, "Username is already in use")
@@ -37,6 +38,7 @@ def update_user(user_id: int, body: UserUpdate, user=Depends(require("user_manag
     if not target: raise HTTPException(404, "User not found")
     if body.role not in ROLES: raise HTTPException(400, "Invalid role")
     if body.status not in ("Active", "Inactive"): raise HTTPException(400, "Invalid status")
+    if body.role == "Employee" and body.employee_id is None: raise HTTPException(400, "Employee accounts require an employee ID")
     if target["role"] == "Admin" and (body.role != "Admin" or body.status != "Active"):
         with _connect() as db:
             if db.execute("SELECT COUNT(*) FROM users WHERE role = 'Admin' AND is_active = 1").fetchone()[0] <= 1:
@@ -44,8 +46,8 @@ def update_user(user_id: int, body: UserUpdate, user=Depends(require("user_manag
     now = datetime.now(timezone.utc).isoformat()
     try:
         with _connect() as db:
-            db.execute("UPDATE users SET full_name=?, username=?, role=?, is_active=?, updated_at=? WHERE id=?",
-                       (body.full_name.strip(), body.username.strip(), body.role, body.status == "Active", now, user_id))
+            db.execute("UPDATE users SET full_name=?, username=?, role=?, employee_id=?, is_active=?, updated_at=? WHERE id=?",
+                       (body.full_name.strip(), body.username.strip(), body.role, body.employee_id, body.status == "Active", now, user_id))
             row = db.execute("SELECT * FROM users WHERE id=?", (user_id,)).fetchone()
     except Exception as exc:
         if "UNIQUE" in str(exc).upper(): raise HTTPException(409, "Username is already in use")
@@ -155,14 +157,33 @@ def update_task(task_id: int, body: TaskCreateOrUpdate, user=Depends(require("pr
     return {"message": "Task updated successfully"}
 
 @router.patch("/tasks/{task_id}/status")
-def update_task_status(task_id: int, body: TaskStatusUpdate, user=Depends(require("projects_write"))):
+def update_task_status(task_id: int, body: TaskStatusUpdate, user=Depends(current_user)):
     with _connect() as db:
-        if not db.execute("SELECT 1 FROM tasks WHERE id = ?", (task_id,)).fetchone():
+        task = db.execute("SELECT id FROM tasks WHERE id = ?", (task_id,)).fetchone()
+        if not task:
             raise HTTPException(404, "Task not found")
+        if user["role"] == "Employee":
+            if user.get("demo") or not user.get("employee_id") or not db.execute("SELECT 1 FROM task_assignments WHERE task_id=? AND employee_id=?", (task_id, user["employee_id"])).fetchone():
+                raise HTTPException(403, "Employees may update only their assigned tasks")
+        elif user["role"] not in ("Admin", "Project Manager"):
+            raise HTTPException(403, "You are not authorized to update task status")
         db.execute('UPDATE tasks SET Status = ?, "Status Changed" = ? WHERE id = ?',
                    (body.status.strip(), datetime.now(timezone.utc).isoformat(), task_id))
         db.commit()
     return {"message": "Task status updated successfully"}
+
+@router.get("/me/work")
+def my_work(user=Depends(require("projects"))):
+    employee_id = user.get("employee_id")
+    if not employee_id:
+        return {"employee": None, "projects": [], "tasks": []}
+    with _connect() as db:
+        employee = db.execute("SELECT * FROM employees WHERE employee_id=?", (employee_id,)).fetchone()
+        tasks = db.execute("""SELECT t.id, t.Ref, t.Status, t.Description, t.Priority, t.project, ta.assigned_hours
+            FROM task_assignments ta JOIN tasks t ON t.id=ta.task_id WHERE ta.employee_id=? ORDER BY t.Status, t.id""", (employee_id,)).fetchall()
+        projects = db.execute("""SELECT p.id, p.name, p.status, p.priority, p.deadline FROM project_assignments pa
+            JOIN projects p ON p.id=pa.project_id WHERE pa.employee_id=? ORDER BY p.name""", (employee_id,)).fetchall()
+    return {"employee": dict(employee) if employee else None, "projects": [dict(row) for row in projects], "tasks": [dict(row) for row in tasks]}
 
 # 3. Employee CRUD
 @router.post("/employees", status_code=201)

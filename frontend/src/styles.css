@@ -23,6 +23,20 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: -1;
+  opacity: .28;
+  background-image: radial-gradient(circle at 12% 18%, rgba(99,102,241,.18) 0 1px, transparent 1.5px), radial-gradient(circle at 78% 22%, rgba(168,85,247,.14) 0 1px, transparent 1.5px), radial-gradient(circle at 62% 78%, rgba(14,165,233,.13) 0 1px, transparent 1.5px);
+  background-size: 170px 190px, 230px 210px, 260px 240px;
+  animation: cosmic-drift 30s linear infinite;
+}
+
+@keyframes cosmic-drift { from { background-position: 0 0, 0 0, 0 0; } to { background-position: 35px 25px, -30px 20px, 20px -25px; } }
+
 button, input, select, textarea {
   font: inherit;
 }

@@ -66,7 +66,8 @@ const permissions: Record<string, string[]> = {
     'Workforce Analytics',
     'Attrition Prediction',
     'Employee Details'
-  ]
+  ],
+  Employee: ['Home', 'Dashboard', 'My Work']
 };
 
 const labels: Record<string, string> = {
@@ -101,6 +102,10 @@ const navGroups = [
       { name: 'Workforce Analytics', icon: Users },
       { name: 'Employee Details', icon: Contact }
     ]
+  },
+  {
+    title: 'My Workspace',
+    items: [{ name: 'My Work', icon: UserCircle }]
   },
   {
     title: 'Simulations & ML',
@@ -298,7 +303,8 @@ const demoRoles = [
     title: 'HR Business Partner',
     text: 'Accesses workforce characteristics, absence records, employee histories, and the attrition forecasting pipeline.',
     color: 'border-purple-100 bg-purple-500/5 text-purple-650 hover:border-purple-300'
-  }
+  },
+  { role: 'Employee' as const, title: 'Employee Workspace', text: 'Review assigned projects, assigned tasks, workload, and update your own task status.', color: 'border-sky-100 bg-sky-500/5 text-sky-650 hover:border-sky-300' }
 ];
 
 function DemoChooser({ onBack, onEnter }: { onBack: () => void; onEnter: (role: User['role']) => void }) {
@@ -481,6 +487,9 @@ function Projects({ detail = false, canEdit = false }: { detail?: boolean; canEd
   const [project, setProject] = useState('');
   const [savingProject, setSavingProject] = useState(false);
   const [savingTask, setSavingTask] = useState<number | null>(null);
+  const [employees, setEmployees] = useState<any[]>([]);
+  const [assignments, setAssignments] = useState<any[]>([]);
+  const [selectedEmployee, setSelectedEmployee] = useState('');
 
   useEffect(() => {
     api.analytics().then(setD);
@@ -488,7 +497,14 @@ function Projects({ detail = false, canEdit = false }: { detail?: boolean; canEd
 
   useEffect(() => {
     if (project) api.project(project).then(setD);
-  }, [project]);
+    if (project && canEdit) Promise.all([api.employees(), api.getProjectAssignments(project)]).then(([all, assigned]) => { setEmployees(all); setAssignments(assigned); }).catch(() => undefined);
+  }, [project, canEdit]);
+
+  const assignEmployee = async () => {
+    if (!project || !selectedEmployee) return;
+    try { await api.assignProjectEmployee(project, Number(selectedEmployee)); setAssignments(await api.getProjectAssignments(project)); setSelectedEmployee(''); }
+    catch (e: any) { window.alert(e.message || 'Assignment failed.'); }
+  };
 
   const saveProject = async () => {
     setSavingProject(true);
@@ -515,6 +531,9 @@ function Projects({ detail = false, canEdit = false }: { detail?: boolean; canEd
   };
 
   if (!d) return <Loading />;
+
+  const metricLabels: Record<string, string> = { total_tasks: 'Total Tasks', open_tasks: 'Open Tasks', closed_tasks: 'Closed Tasks', overdue_tasks: 'Overdue Tasks', completion_rate: 'Completion Rate', safety_tasks: 'Safety Tasks', high_priority_tasks: 'High Priority Tasks', total_forms: 'Total Forms', open_actions: 'Open Actions', total_actions: 'Total Actions' };
+  const metricCards = Object.entries(d.metrics).filter(([key]) => metricLabels[key]);
 
   const breakdownRows = d.breakdowns
     ? Object.entries(d.breakdowns).flatMap(([type, items]: any) =>
@@ -564,6 +583,11 @@ function Projects({ detail = false, canEdit = false }: { detail?: boolean; canEd
                   <label className="text-xs font-bold uppercase tracking-wider text-slate-500">Deadline<input type="date" value={d.deadline || ''} onChange={(e) => setD({ ...d, deadline: e.target.value })} className="mt-2 w-full rounded-xl border border-slate-200 bg-white p-3 text-sm font-normal normal-case tracking-normal text-slate-800" /></label>
                 </div>
                 <button onClick={saveProject} disabled={savingProject || !d.name?.trim()} className="mt-4 rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-bold text-white disabled:opacity-50">{savingProject ? 'Saving…' : 'Save Project Changes'}</button>
+                <div className="mt-6 border-t border-indigo-100 pt-5">
+                  <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Assigned Resources</p>
+                  <div className="mt-3 flex flex-col gap-3 sm:flex-row"><select aria-label="Select employee to assign" value={selectedEmployee} onChange={(e) => setSelectedEmployee(e.target.value)} className="min-w-0 flex-1 rounded-xl border border-slate-200 bg-white p-3 text-sm text-slate-800"><option value="">Select employee…</option>{employees.filter((e) => !assignments.some((a) => String(a.employee_id) === String(e.employee_id))).map((e) => <option key={e.employee_id} value={e.employee_id}>#{e.employee_id} · {e.department} · {e.role_level}</option>)}</select><button onClick={assignEmployee} disabled={!selectedEmployee} className="rounded-xl bg-teal-600 px-4 py-3 text-sm font-bold text-white disabled:opacity-50">Assign Resource</button></div>
+                  <div className="mt-3 flex flex-wrap gap-2">{assignments.length ? assignments.map((a) => <span key={a.employee_id} className="rounded-full border border-teal-100 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700">#{a.employee_id} · {a.department} · {a.role_level}</span>) : <span className="text-xs text-slate-400">No resources assigned yet.</span>}</div>
+                </div>
               </div>
             )}
             <div>
@@ -596,8 +620,8 @@ function Projects({ detail = false, canEdit = false }: { detail?: boolean; canEd
   return (
     <Page title="Project Analytics" subtitle="Aggregate telemetry of deliverables, priorities, and workflow statuses.">
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-        {Object.entries(d.metrics).map(([k, v]) => (
-          <KPI key={k} label={k.replaceAll('_', ' ')} value={String(v).includes('rate') ? `${v}%` : v} />
+        {metricCards.map(([k, v]) => (
+          <KPI key={k} label={metricLabels[k]} value={k === 'completion_rate' ? `${v}%` : v} />
         ))}
       </div>
 
@@ -1132,6 +1156,24 @@ function Employees() {
   );
 }
 
+function MyWork() {
+  const [data, setData] = useState<any>();
+  const [error, setError] = useState('');
+  const [saving, setSaving] = useState<number | null>(null);
+  useEffect(() => { api.myWork().then(setData).catch((e) => setError(e.message)); }, []);
+  const update = async (id: number, status: string) => {
+    setSaving(id);
+    try { await api.updateTaskStatus(id, status); setData(await api.myWork()); }
+    catch (e: any) { setError(e.message); } finally { setSaving(null); }
+  };
+  if (!data) return error ? <Page title="My Work" subtitle={error}><div className="rounded-xl bg-rose-50 p-4 text-sm text-rose-700">{error}</div></Page> : <Loading />;
+  return <Page title="My Work" subtitle="Your assigned projects, tasks, and current workload capacity.">
+    {error && <div className="mb-5 rounded-xl bg-rose-50 p-4 text-sm text-rose-700">{error}</div>}
+    <div className="grid gap-4 sm:grid-cols-3"><KPI label="Assigned Projects" value={data.projects.length} /><KPI label="Assigned Tasks" value={data.tasks.length} /><KPI label="Assigned Workload" value={`${data.tasks.reduce((sum: number, t: any) => sum + Number(t.assigned_hours || 0), 0)} hrs`} /></div>
+    <div className="mt-8 grid gap-6 lg:grid-cols-2"><section><h2 className="mb-4 text-sm font-bold uppercase tracking-wider text-slate-400">My Projects</h2><Table rows={data.projects} /></section><section><h2 className="mb-4 text-sm font-bold uppercase tracking-wider text-slate-400">My Tasks</h2><div className="space-y-2 rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">{data.tasks.length ? data.tasks.map((task: any) => <div key={task.id} className="flex flex-col gap-2 rounded-xl border border-slate-100 p-3 sm:flex-row sm:items-center sm:justify-between"><span className="min-w-0 text-sm font-semibold text-slate-700 break-words">{task.Ref || `Task ${task.id}`} · {task.Description || 'No description'} <span className="text-xs text-slate-400">({task.assigned_hours || 0} hrs)</span></span><select aria-label={`Status for ${task.Ref || task.id}`} value={task.Status || ''} disabled={saving === task.id} onChange={(e) => update(task.id, e.target.value)} className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 sm:w-36"><option>Open</option><option>In Progress</option><option>Closed</option><option>Completed</option><option>On Hold</option></select></div>) : <p className="p-5 text-sm text-slate-400">No tasks assigned yet.</p>}</div></section></div>
+  </Page>;
+}
+
 function UserManagement({ readOnly = false }: { readOnly?: boolean }) {
   const [users, setUsers] = useState<ManagedUser[]>([]);
   const [modal, setModal] = useState<'create' | 'edit' | null>(null);
@@ -1181,7 +1223,8 @@ function UserManagement({ readOnly = false }: { readOnly?: boolean }) {
           full_name: form.full_name,
           username: form.username,
           role: form.role,
-          status: form.status
+          status: form.status,
+          employee_id: form.employee_id || null
         });
         setMessage('User settings updated.');
       }
@@ -1398,8 +1441,14 @@ function UserManagement({ readOnly = false }: { readOnly?: boolean }) {
                   <option>Admin</option>
                   <option>Project Manager</option>
                   <option>HR Manager</option>
+                  <option>Employee</option>
                 </select>
               </div>
+
+              {form.role === 'Employee' && <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">Employee ID</label>
+                <input required type="number" min="1" value={form.employee_id || ''} onChange={(e) => setForm({ ...form, employee_id: Number(e.target.value) })} placeholder="Linked employee ID" className="w-full rounded-xl border border-slate-205 p-2.5 text-sm text-slate-800 bg-white" />
+              </div>}
 
               <div>
                 <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">
@@ -1619,6 +1668,7 @@ export default function App() {
     'Attrition Prediction': <Attrition />,
     'Project Details': <Projects detail canEdit={!demoRole} />,
     'Employee Details': <Employees />,
+    'My Work': <MyWork />,
     'User Management': <UserManagement readOnly={!!demoRole} />
   };
 

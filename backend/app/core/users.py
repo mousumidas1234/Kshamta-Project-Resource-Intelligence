@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 
 from .config import USERS_DB_PATH
 
-ROLES = ("Admin", "Project Manager", "HR Manager")
+ROLES = ("Admin", "Project Manager", "HR Manager", "Employee")
 
 
 def _connect():
@@ -34,16 +34,35 @@ def verify_password(password: str, encoded: str) -> bool:
 
 def initialize():
     with _connect() as db:
+        existing = db.execute("SELECT sql FROM sqlite_master WHERE type='table' AND name='users'").fetchone()
+        if existing and "'Employee'" not in (existing[0] or ""):
+            db.execute("ALTER TABLE users RENAME TO users_legacy")
+            db.execute("""CREATE TABLE users (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                full_name TEXT NOT NULL,
+                username TEXT NOT NULL COLLATE NOCASE UNIQUE,
+                password_hash TEXT NOT NULL,
+                role TEXT NOT NULL CHECK(role IN ('Admin', 'Project Manager', 'HR Manager', 'Employee')),
+                employee_id INTEGER,
+                is_active INTEGER NOT NULL DEFAULT 1,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL
+            )""")
+            db.execute("INSERT INTO users(id, full_name, username, password_hash, role, is_active, created_at, updated_at) SELECT id, full_name, username, password_hash, role, is_active, created_at, updated_at FROM users_legacy")
+            db.execute("DROP TABLE users_legacy")
         db.execute("""CREATE TABLE IF NOT EXISTS users (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             full_name TEXT NOT NULL,
             username TEXT NOT NULL COLLATE NOCASE UNIQUE,
             password_hash TEXT NOT NULL,
-            role TEXT NOT NULL CHECK(role IN ('Admin', 'Project Manager', 'HR Manager')),
+            role TEXT NOT NULL CHECK(role IN ('Admin', 'Project Manager', 'HR Manager', 'Employee')),
+            employee_id INTEGER,
             is_active INTEGER NOT NULL DEFAULT 1,
             created_at TEXT NOT NULL,
             updated_at TEXT NOT NULL
         )""")
+        if "employee_id" not in {row[1] for row in db.execute("PRAGMA table_info(users)")}:
+            db.execute("ALTER TABLE users ADD COLUMN employee_id INTEGER")
         if db.execute("SELECT COUNT(*) FROM users").fetchone()[0] == 0:
             now = datetime.now(timezone.utc).isoformat()
             for full_name, username, password, role in (
@@ -57,7 +76,7 @@ def initialize():
 
 def public_user(row):
     return {"id": row["id"], "full_name": row["full_name"], "username": row["username"],
-            "role": row["role"], "status": "Active" if row["is_active"] else "Inactive",
+            "role": row["role"], "employee_id": row["employee_id"] if "employee_id" in row.keys() else None, "status": "Active" if row["is_active"] else "Inactive",
             "created_at": row["created_at"], "updated_at": row["updated_at"]}
 
 

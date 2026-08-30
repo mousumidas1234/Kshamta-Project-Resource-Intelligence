@@ -76,7 +76,7 @@ export function KPI({ label, value }: { label: string; value: any }) {
         <p className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 whitespace-normal break-words leading-tight">
           {label}
         </p>
-        <p className={`mt-2 text-xl sm:text-2xl font-black tracking-tight ${colors.text} truncate`}>
+        <p className={`mt-2 text-xl sm:text-2xl font-black tracking-tight ${colors.text} break-words leading-tight`}>
           {value}
         </p>
       </div>
