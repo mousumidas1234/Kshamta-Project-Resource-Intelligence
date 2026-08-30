@@ -3,6 +3,30 @@ import pandas as pd
 from pathlib import Path
 from .config import USERS_DB_PATH, DATA_DIR
 
+def ensure_assignment_tables(conn):
+    """Apply the assignment schema to both new and previously-created databases."""
+    conn.execute("""
+    CREATE TABLE IF NOT EXISTS project_assignments (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        project_id TEXT NOT NULL,
+        employee_id INTEGER NOT NULL,
+        FOREIGN KEY(project_id) REFERENCES projects(id) ON DELETE CASCADE,
+        FOREIGN KEY(employee_id) REFERENCES employees(employee_id) ON DELETE CASCADE,
+        UNIQUE(project_id, employee_id)
+    )""")
+    conn.execute("""
+    CREATE TABLE IF NOT EXISTS task_assignments (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        task_id INTEGER NOT NULL,
+        employee_id INTEGER NOT NULL,
+        assigned_hours REAL NOT NULL DEFAULT 0,
+        FOREIGN KEY(task_id) REFERENCES tasks(id) ON DELETE CASCADE,
+        FOREIGN KEY(employee_id) REFERENCES employees(employee_id) ON DELETE CASCADE,
+        UNIQUE(task_id, employee_id)
+    )""")
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_project_assignments_employee ON project_assignments(employee_id)")
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_task_assignments_employee ON task_assignments(employee_id)")
+
 def initialize_db():
     conn = sqlite3.connect(USERS_DB_PATH)
     # Enforce the declared assignment cascades for every connection used during
@@ -89,30 +113,6 @@ def initialize_db():
         "Report Forms Group" TEXT,
         FOREIGN KEY(Project) REFERENCES projects(id) ON DELETE SET NULL
     )""")
-    
-    # 5. Create project_assignments table
-    cursor.execute("""
-    CREATE TABLE IF NOT EXISTS project_assignments (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        project_id TEXT NOT NULL,
-        employee_id INTEGER NOT NULL,
-        FOREIGN KEY(project_id) REFERENCES projects(id) ON DELETE CASCADE,
-        FOREIGN KEY(employee_id) REFERENCES employees(employee_id) ON DELETE CASCADE,
-        UNIQUE(project_id, employee_id)
-    )""")
-
-    # 6. Create task_assignments table
-    cursor.execute("""
-    CREATE TABLE IF NOT EXISTS task_assignments (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        task_id INTEGER NOT NULL,
-        employee_id INTEGER NOT NULL,
-        assigned_hours REAL,
-        FOREIGN KEY(task_id) REFERENCES tasks(id) ON DELETE CASCADE,
-        FOREIGN KEY(employee_id) REFERENCES employees(employee_id) ON DELETE CASCADE,
-        UNIQUE(task_id, employee_id)
-    )""")
-    
     conn.commit()
     
     # Seed data if tables are empty
@@ -159,6 +159,10 @@ def initialize_db():
         df_forms = pd.read_csv(DATA_DIR / "forms_clean.csv")
         df_forms['OverDue'] = df_forms['OverDue'].astype(int)
         df_forms.to_sql('forms', conn, if_exists='append', index=False)
-        
+
+    # This is intentionally after the base tables and seed migration so an old
+    # database receives the same single assignment system used by the API.
+    ensure_assignment_tables(conn)
+
     conn.commit()
     conn.close()

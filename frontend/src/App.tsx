@@ -6,7 +6,6 @@ import { Chart } from './components/Chart';
 import {
   LayoutDashboard,
   ListTodo,
-  Home,
   BarChart3,
   AlertTriangle,
   Users,
@@ -35,12 +34,15 @@ import {
   Lock,
   UserCircle,
   AlertOctagon,
-  Shield
+  Shield,
+  MessageCircle,
+  Send,
+  Bot,
+  LoaderCircle
 } from 'lucide-react';
 
 const permissions: Record<string, string[]> = {
   Admin: [
-    'Home',
     'Dashboard',
     'Project Analytics',
     'Project Risk',
@@ -54,7 +56,6 @@ const permissions: Record<string, string[]> = {
     'Employee Management'
   ],
   'Project Manager': [
-    'Home',
     'Dashboard',
     'Project Management',
     'Project Analytics',
@@ -66,14 +67,13 @@ const permissions: Record<string, string[]> = {
     'Project Details'
   ],
   'HR Manager': [
-    'Home',
     'Dashboard',
     'Workforce Analytics',
     'Attrition Prediction',
     'Employee Details',
     'Employee Management'
   ],
-  Employee: ['Home', 'Dashboard', 'My Projects', 'My Tasks', 'My Workload']
+  Employee: ['Dashboard', 'My Projects', 'My Tasks', 'My Workload']
 };
 
 const labels: Record<string, string> = {
@@ -92,7 +92,7 @@ const labels: Record<string, string> = {
 const navGroups = [
   {
     title: 'Overview',
-    items: [{ name: 'Home', icon: Home }, { name: 'Dashboard', icon: LayoutDashboard }]
+    items: [{ name: 'Dashboard', icon: LayoutDashboard }]
   },
   {
     title: 'Project Intelligence',
@@ -135,6 +135,13 @@ function CosmicBackdrop() {
   return <div aria-hidden="true" className="cosmic-backdrop"><i /><i /><i /><i /><i /><i /><i /><i /></div>;
 }
 
+function startPageForRole(role: User['role']) {
+  if (role === 'Project Manager') return 'Project Analytics';
+  if (role === 'HR Manager') return 'Workforce Analytics';
+  if (role === 'Employee') return 'My Work';
+  return 'Dashboard';
+}
+
 function Landing({ onExplore, onSignIn }: { onExplore: () => void; onSignIn: () => void }) {
   const [menuOpen, setMenuOpen] = useState(false);
   return (
@@ -154,8 +161,6 @@ function Landing({ onExplore, onSignIn }: { onExplore: () => void; onSignIn: () 
           {menuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
         </button>
         <nav aria-label="Public navigation" className={`${menuOpen ? 'absolute left-6 right-6 top-20 flex' : 'hidden'} z-20 flex-col gap-1 rounded-2xl border border-slate-700 bg-slate-900 p-3 text-sm font-semibold shadow-2xl md:static md:flex md:flex-row md:items-center md:gap-5 md:border-0 md:bg-transparent md:p-0 md:shadow-none`}>
-          <a href="#" onClick={() => setMenuOpen(false)} className="rounded-lg px-3 py-2 text-white hover:bg-white/5">Home</a>
-          {['Project Analytics', 'Project Details', 'Project Risk', 'Workforce Analytics', 'Employee Details', 'Resource Management'].map((item) => <button key={item} onClick={() => { setMenuOpen(false); onSignIn(); }} className="rounded-lg px-3 py-2 text-left text-slate-300 hover:bg-white/5 hover:text-white md:px-0">{item}</button>)}
           <button onClick={() => { setMenuOpen(false); onSignIn(); }} className="rounded-xl border border-slate-700 bg-slate-900/40 px-5 py-2.5 text-white hover:border-indigo-400 hover:bg-slate-900">Sign In</button>
         </nav>
       </header>
@@ -187,7 +192,7 @@ function Landing({ onExplore, onSignIn }: { onExplore: () => void; onSignIn: () 
               onClick={onSignIn}
               className="rounded-xl border border-slate-750 bg-slate-900/30 px-6 py-4 text-sm font-bold text-white hover:bg-slate-900 hover:border-indigo-400 transition-all cursor-pointer"
             >
-              View Project Analytics
+              Log In
             </button>
           </div>
         </div>
@@ -1616,6 +1621,53 @@ function Loading() {
   );
 }
 
+function KshamtaAssistant({ role }: { role: User['role'] }) {
+  const [open, setOpen] = useState(false);
+  const [input, setInput] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [messages, setMessages] = useState<Array<{ from: 'assistant' | 'user'; text: string }>>([
+    { from: 'assistant', text: `Hello. I’m KSHAMTA Assistant for ${role}. Ask me about the live information available to your role.` }
+  ]);
+  const suggestions = role === 'Employee'
+    ? ['What is my current workload?', 'What are my overdue tasks?']
+    : ['Which employees have available capacity?', 'Show project risks.', 'Who is overloaded?'];
+
+  const send = async (event?: React.FormEvent, preset?: string) => {
+    event?.preventDefault();
+    const question = (preset || input).trim();
+    if (!question || busy) return;
+    setInput('');
+    setMessages((current) => [...current, { from: 'user', text: question }]);
+    setBusy(true);
+    try {
+      const result = await api.assistantChat(question);
+      setMessages((current) => [...current, { from: 'assistant', text: result.message }]);
+    } catch (error: any) {
+      setMessages((current) => [...current, { from: 'assistant', text: error.message || 'I could not reach the KSHAMTA services.' }]);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="assistant-shell">
+      {open && <section className="assistant-panel" aria-label="KSHAMTA AI Assistant">
+        <header className="assistant-header">
+          <div className="flex items-center gap-3"><span className="assistant-avatar"><Bot className="h-5 w-5" /></span><div><p className="text-sm font-extrabold text-white">KSHAMTA Assistant</p><p className="text-[10px] text-indigo-200">Live, read-only workspace insights</p></div></div>
+          <button type="button" onClick={() => setOpen(false)} aria-label="Close assistant" className="assistant-close"><X className="h-4 w-4" /></button>
+        </header>
+        <div className="assistant-messages" aria-live="polite">
+          {messages.map((message, index) => <div key={`${message.from}-${index}`} className={`assistant-message ${message.from === 'user' ? 'assistant-message-user' : 'assistant-message-bot'}`}><span className="whitespace-pre-line">{message.text}</span></div>)}
+          {busy && <div className="assistant-message assistant-message-bot flex items-center gap-2"><LoaderCircle className="h-4 w-4 animate-spin text-indigo-500" /> Reviewing current data…</div>}
+        </div>
+        {messages.length === 1 && <div className="assistant-suggestions">{suggestions.map((suggestion) => <button type="button" key={suggestion} onClick={() => send(undefined, suggestion)}>{suggestion}</button>)}</div>}
+        <form className="assistant-input-row" onSubmit={send}><input value={input} onChange={(event) => setInput(event.target.value)} placeholder="Ask about your workspace…" aria-label="Message KSHAMTA Assistant" maxLength={1200} /><button type="submit" disabled={!input.trim() || busy} aria-label="Send message"><Send className="h-4 w-4" /></button></form>
+      </section>}
+      <button type="button" className="assistant-launcher" onClick={() => setOpen((value) => !value)} aria-label={open ? 'Close KSHAMTA Assistant' : 'Open KSHAMTA Assistant'} aria-expanded={open}><MessageCircle className="h-6 w-6" /><span className="assistant-launcher-label">Ask KSHAMTA</span></button>
+    </div>
+  );
+}
+
 export default function App() {
   const [user, setUser] = useState<User | null>(() => {
     if (window.location.hash !== '#app') return null;
@@ -1638,7 +1690,7 @@ export default function App() {
   });
 
   const [entry, setEntry] = useState<'landing' | 'chooser' | 'login'>('landing');
-  const [page, setPage] = useState('Home');
+  const [page, setPage] = useState('Dashboard');
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   if (!user) {
@@ -1653,6 +1705,7 @@ export default function App() {
               sessionStorage.setItem('kshamta_demo_user', JSON.stringify(r.user));
               window.location.hash = 'app';
               setDemoRole(role);
+              setPage(startPageForRole(role));
               setUser(r.user);
             } catch (e: any) {
               alert(e.message);
@@ -1668,6 +1721,7 @@ export default function App() {
           onLogin={(u) => {
             localStorage.setItem('kshamta_user', JSON.stringify(u));
             window.location.hash = 'app';
+            setPage(startPageForRole(u.role));
             setUser(u);
           }}
         />
@@ -1679,7 +1733,6 @@ export default function App() {
   const activeUser = user;
   const goToPage = (target: string) => setPage(target);
   const content: any = {
-    Home: <RoleHome role={activeUser.role} onNavigate={goToPage} />,
     Dashboard: <Dashboard />,
     'Project Management': <Projects canEdit={!demoRole} />,
     'Project Analytics': <Projects canEdit={!demoRole} />,
@@ -1709,7 +1762,7 @@ export default function App() {
     setUser(null);
     setDemoRole(null);
     setEntry('landing');
-    setPage('Home');
+    setPage(startPageForRole(activeUser.role));
   };
 
   const allowedPages = permissions[activeUser.role];
@@ -1725,7 +1778,7 @@ export default function App() {
       <CosmicBackdrop />
       {/* Mobile Top Bar */}
       <header className="lg:hidden flex items-center justify-between bg-slate-900 text-white px-5 py-4 border-b border-slate-800 shrink-0 select-none">
-        <img src="/logo.svg" className="h-8 rounded bg-white p-0.5" />
+        <button type="button" aria-label="Return to role dashboard" onClick={() => { setPage(startPageForRole(activeUser.role)); setSidebarOpen(false); }} className="rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400"><img src="/logo.svg" alt="KSHAMTA" className="h-8 rounded bg-white p-0.5" /></button>
         <button
           onClick={() => setSidebarOpen(!sidebarOpen)}
           className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
@@ -1743,7 +1796,7 @@ export default function App() {
         `}
       >
         <div className="p-6 border-b border-slate-800 hidden lg:block">
-          <img src="/logo.svg" className="h-10 rounded-xl bg-white p-1" />
+          <button type="button" aria-label="Return to role dashboard" onClick={() => setPage(startPageForRole(activeUser.role))} className="rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-400"><img src="/logo.svg" alt="KSHAMTA" className="h-10 rounded-xl bg-white p-1" /></button>
         </div>
 
         {demoRole && (
@@ -1845,6 +1898,7 @@ export default function App() {
           {content[page]}
         </div>
       </section>
+      <KshamtaAssistant role={activeUser.role} />
     </div>
   );
 }
