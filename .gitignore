@@ -62,3 +62,7 @@ Thumbs.db
 *.temp
 *.swp
 kshamta_users.db
+
+# Private project datasets
+data_cleaned/forms_clean.csv
+data_cleaned/tasks_clean.csv
